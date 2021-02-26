@@ -1,5 +1,4 @@
 import numpy as np
-from src.infer_ptype import Text
 from greenery.lego import parse
 
 

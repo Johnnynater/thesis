@@ -1,8 +1,7 @@
-from src import pfsm
+from src import selfmade_pfsm
 
 
 def load_dataset():
-    print("dog")
     pass
 
 
@@ -15,6 +14,10 @@ def inference_string_features():
 
 
 def inference_statistical_type():
+    pass
+
+
+def inference_heuristics():
     pass
 
 
@@ -36,7 +39,7 @@ def output_dataset():
 
 if __name__ == "__main__":
     # Selftest: create pfsm
-    pfsm = pfsm.PFSM(r'([a-zA-Z0-9_.+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+)')
+    pfsm = selfmade_pfsm.PFSM(r'([a-zA-Z0-9_.+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+)')
     pfsm.create_pfsm()
 
     # Load in the dataset
@@ -51,6 +54,9 @@ if __name__ == "__main__":
 
     # If cannot infer using given PFSMs, infer categorical / ordinal / continuous
     inference_statistical_type()
+
+    # Additionally: try to infer the type using heuristics
+    inference_heuristics()
 
     # Remove or repair any detected outliers
     handle_outliers()
