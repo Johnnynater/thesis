@@ -1,7 +1,7 @@
 import numpy as np
 from greenery.lego import parse
 
-
+# TODO: check if we need this at all
 class PFSM:
     def __init__(self, regex):
         # self.regex = regex
