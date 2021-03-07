@@ -4,54 +4,47 @@ from src.pfsms import create_pfsm
 from ptype.Trainer import Trainer
 from ptype.Ptype import Ptype
 
-train_email = [
-    r'email@example.com',
-    r'firstname.lastname@example.com',
-    r'email@subdomain.example.com',
-    r'firstname+lastname@example.com',
-    r'email@123.123.123.123',
-    r'email@[123.123.123.123]',
-    r'"email"@example.com',
-    r'1234567890@example.com',
-    r'email@example-one.com',
-    r'_______@example.com',
-    r'email@example.name',
-    r'email@example.museum',
-    r'email@example.co.jp',
-    r'firstname-lastname@example.com',
-    r'much.”more\ unusual”@example.com',
-    r'very.unusual.”@”.unusual.com@example.com',
-    r'very.”(),:;<>[]”.VERY.”very@\\ "very”.unusual@strange.example.com'
-]
-column_email = ['email']
-test_email = ['Johnny1250@hotmail.com', 'jlith1997@gmail.com', 'nickh2olaat@goog.de', 'stefgoogle.com', 'NA', 'NA']
 
-train_sentence = [
-    r"An Irishman named O'Malley went to his doctor after a long illness.",
-    r"the doctor, after a lengthy examination, sighed and looked O'Malley in the eye and said,",
-    r"I've some bad news for you. You have cancer, and it can't be cured, you'd best put your affairs in order.",
-    r"oMalley was shocked and saddened; but of solid character, he managed to compose himself and walk from the doctor's office into the waiting room. ",
-    r"To his son who had been waiting, O'Malley said, ",
-    r"well son. We Irish celebrate when things are good, and we celebrate when things don't go so well. In this case, things aren't so well. I have cancer.",
-    r" Let's head for the pub and have a few pints ",
-    r"after 3 or 4 pints, the two were feeling a little less somber. There were some laughs and more beers.",
-    r"They were eventually approached by some of O'Malley's old friends who asked what the two were celebrating.",
-    r"o'Malley told them that the Irish celebrate the good and the bad",
-    r"He went on to tell them that they were drinking to his impending end",
-    r"he told his friends, I have been diagnosed with AIDS.",
-    r"The friends gave O'Malley their condolences, and they had a couple more beers. ",
-    r"ffter his friends left, O'Malley's son whispered his confusion."
-]
-column_sentence = ['sentence']
+def load_data(names):
+    """ Load train and test data from .csv files
 
-test_sentence = [
-    "just came across a counterparty that needs to be flipped to the FT-US/CAND-ERMS book for all deals in Houston books.",
-    "ECC has now signed a Master Swap Agreement with Aquila Canada Corp., and all deals traded with ENA",
-    "and Aquila Canada Corp. need to be settled with ECC in the P& book.",
-    " These deals are showing up in TAGG as settling with ENA, could you all please keep an eye out for deals with this company and flip them right away.",
-    "Please let me know if you have any questions on this.",
-    "Thanks"
-]
+    :param names: a list of substrings of each file
+    :return: lists train_data, test_data, and column_labels
+    """
+    train_data, test_data, column_labels = [], [], []
+    for name in names:
+        # Applying temp and removing the last char is needed to remove \n for each entry
+        tmp = list(open('datasets/%s_train.csv' % name))
+        train_data.append([tmp[i][:-1] for i in range(len(tmp))])
+
+        tmp = list(open('datasets/%s_test.csv' % name))
+        test_data.append([tmp[i][:-1] for i in range(len(tmp))])
+
+        column_labels.append([name])
+    return train_data, test_data, column_labels
+
+
+def load_machines(names):
+    """ Load a (set of) machine(s) from one or more .obj files.
+
+    :param names: a list of names of each Machine class to be loaded.
+    :return: a list of Machine classes
+    """
+    loaded_machines = []
+    for name in names:
+        loaded_machines.append(pkl.load(open('pfsms/trained_machines/%s.obj' % name, 'rb')))
+    return loaded_machines
+
+
+def save_machines(names):
+    """ Save the trained machines in a separate .obj file.
+
+    :param names: a list of names of each Machine class to be saved.
+    :return:
+    """
+    for name in names:
+        file_machine = open('pfsms/trained_machines/%s.obj' % name, 'wb')
+        pkl.dump(ptype.machines.forType[name], file_machine)
 
 
 def print_params(uniformly, initial, final):
@@ -122,38 +115,21 @@ def test_machines(data):
     """
     test_set = pd.DataFrame({i: data[i] for i in range(len(data))})
     schema = ptype.schema_fit(test_set)
-    print(schema.show())
+    print(schema.show().to_string())
 
 
-def save_machines(names):
-    """ Save the trained machines in a separate .obj file.
-
-    :param names: a list of names of each Machine class to be saved.
-    :return:
-    """
-    for name in names:
-        file_machine = open('pfsms/trained_machines/%s.obj' % name, 'wb')
-        pkl.dump(ptype.machines.forType[name], file_machine)
-
-
-def load_machines(names):
-    """ Load a (set of) machine(s) from one or more .obj files.
-
-    :param names: a list of names of each Machine class to be loaded.
-    :return: a list of Machine classes
-    """
-    loaded_machines = []
-    for name in names:
-        loaded_machines.append(pkl.load(open('pfsms/trained_machines/%s.obj' % name, 'rb')))
-    return loaded_machines
-
-# TODO: Coordinate, Day, Filepath, Month, OrdinalNumbers, URL
 # Instantiate Ptype class
 ptype = Ptype()
 
-# Load up the machines to train/test
-machines = [create_pfsm.Email(), create_pfsm.Sentence()]
-names = ['email', 'sentence']
+# Load required data
+names = ['email', 'sentence', 'coordinate', 'day', 'filepath', 'month', 'ordinal', 'url']
+train, test, columns = load_data(names)
+
+# Load the machines to train/test
+machines = [create_pfsm.Email(), create_pfsm.Sentence(),
+            create_pfsm.Coordinate(), create_pfsm.Day(),
+            create_pfsm.Filepath(), create_pfsm.Month(),
+            create_pfsm.OrdinalNumbers(), create_pfsm.URL()]
 
 setup_machines(machines, names)
 
@@ -161,6 +137,6 @@ setup_machines(machines, names)
 # ptype.machines.types.remove('string')
 # del ptype.machines.forType['string']
 
-train_machines([train_email, train_sentence], [column_email, column_sentence], 20)
-test_machines([test_email, test_sentence])
+train_machines(train, columns, 200)
+test_machines(test)
 # save_machines(names)
