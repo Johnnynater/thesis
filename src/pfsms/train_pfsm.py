@@ -6,10 +6,10 @@ from ptype.Ptype import Ptype
 
 
 def load_data(names):
-    """ Load train and test data from .csv files
+    """ Load train and test data from .csv files.
 
-    :param names: a list of substrings of each file
-    :return: lists train_data, test_data, and column_labels
+    :param names: a list of substrings of each file.
+    :return: lists train_data, test_data, and column_labels.
     """
     train_data, test_data, column_labels = [], [], []
     for name in names:
@@ -28,7 +28,7 @@ def load_machines(names):
     """ Load a (set of) machine(s) from one or more .obj files.
 
     :param names: a list of names of each Machine class to be loaded.
-    :return: a list of Machine classes
+    :return: a list of Machine classes.
     """
     loaded_machines = []
     for name in names:
