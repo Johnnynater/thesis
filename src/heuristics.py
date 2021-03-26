@@ -3,7 +3,7 @@ from src.infer_stattype import generate_clusters
 
 
 # TODO: come up with more names / keywords
-COLUMN_NAMES = ['name', 'address', 'year', 'zip', 'code', 'x', 'y',
+COLUMN_NAMES = ['name', 'address', 'year', 'zip', 'code', 'type',
                 'latitude', 'longitude', 'location', 'city', 'country', 'gender', 'sex']
 
 KEYWORDS = ['probably', 'hardly', 'scarcely', 'minutely', 'vaguely',
@@ -42,11 +42,11 @@ def ratio_check(nr_unique, nr_total):
     ratio = nr_unique / nr_total
     # Check whether number of unique elements are according to Likert-Scale characteristics
     print((0.104 - 0.0001 * nr_total), (0.0002 * nr_total + 0.2), nr_total, ratio, (ratio < (0.104 - 0.0001 * nr_total)), (ratio < (0.0002 * nr_total + 0.2) and nr_unique in [3, 5, 7]), nr_unique)
-    if ratio < (0.104 - 0.0001 * nr_total):
+    if ratio < (0.104 - 0.0001 * nr_total) and nr_unique < 10:
         return 'Ordinal'
-    elif ratio < (0.0002 * nr_total + 0.2) and nr_unique in [3, 5, 7]:
+    elif ratio < (0.0002 * nr_total + 0.2) and nr_unique <= 7:
         return 'Categorical/Ordinal'
-    elif ratio < (0.0002 * nr_total + 0.2) and nr_unique not in [3, 5, 7]:
+    elif ratio < (0.0002 * nr_total + 0.2) and nr_unique > 7:
         return 'Categorical'
     else:
         return 'Continuous'
@@ -64,8 +64,8 @@ def keyword_check(df):
             if keyword in item[0]:
                 keyword_counter += 1
     if keyword_counter / df.size < 0.2:
-        return 'Keywords do not match ordinal data'
-    return 'Keywords match ordinal data'
+        return 'Column does not contain any keywords'
+    return 'Column contains one or more keywords (ordinal)'
 
 
 def comstring_check(df):
@@ -118,7 +118,7 @@ def run_heuristics(df):
     :return: a list containing results.
     """
     # Take samples if there are too many entries
-    if df.size > 1000:
+    if len(df) > 1000:
         df = df.sample(1000)
     results = []
     for column in df:
@@ -127,12 +127,13 @@ def run_heuristics(df):
         unique_entries = clusters.value_counts()
 
         # Pre-check the ratio to avoid evaluating continuous data types
-        ratio_type = ratio_check(unique_entries.count(), clusters.size)
+        ratio_type = ratio_check(unique_entries.count(), len(clusters))
 
         if ratio_type == 'Continuous':
             results.append([ratio_type])
         else:
-            results.append([ratio_type,
+            results.append([column,
+                            ratio_type,
                             name_check(clusters.columns[0]),
                             keyword_check(unique_entries),
                             comstring_check(unique_entries)])

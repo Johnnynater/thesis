@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
     load_dataset()
-    data = pd.read_csv('datasets/aug_train.csv')
+    data = pd.read_csv('datasets/xAPI-Edu-Data.csv')
 
     # Infer data type
     schema, names = inference_ptype(data)
