@@ -83,3 +83,5 @@ class URL(Machine):
         self.create_T_new()
         self.copy_to_z()
         # print(self.T)
+
+# TODO: Range pfsm? e.g. 100-500, <10, >10, 100+

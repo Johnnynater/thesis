@@ -1,7 +1,12 @@
 from ptype.Ptype import Ptype
+import pickle as pkl
 
-# TODO: check if we need this at all
+
 def infer_ptype(data):
     ptype = Ptype()
-    schema = ptype.schema_fit(data)
-    return schema.transform(schema)
+    names = ['email', 'sentence', 'coordinate', 'day', 'filepath', 'month', 'ordinal', 'url']
+    for name in names:
+        machine = pkl.load(open('pfsms/trained_machines/%s.obj' % name, 'rb'))
+        ptype.types.append(name)
+        ptype.machines.forType[name] = machine
+    return ptype.schema_fit(data), names

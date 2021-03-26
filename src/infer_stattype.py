@@ -40,12 +40,12 @@ class OrdinalDistribution:
                                 for i in range(nr_unique)]
 
 
-def convert_similar(df):
+def generate_clusters(df):
     """ Generate clusters of similar entries.
 
     This method checks whether the proportion of an entry is above or below a pre-defined threshold.
     (In our case, the threshold is set at 0.05.) After that, all entries that are below the threshold
-    are put in the same cluster as entries below the threshold based on their string similarity.
+    are replaced by above-threshold values based on their string similarity.
 
     :param df: a pandas DataFrame to be clustered
     :return: a pandas DataFrame containing the resulting clusters
@@ -53,29 +53,32 @@ def convert_similar(df):
     # TODO: come up with better measure to detect 'outliers'
     threshold = 0.05
     above_thresh, below_thresh = [], []
-    for label, value in df.iteritems():
+    probabilities = df.value_counts(normalize=True, sort=False)
+    for label, value in probabilities.iteritems():
         if value >= threshold:
+            # Change to label[0] if required
             above_thresh.append(label[0])
         else:
             below_thresh.append(label[0])
 
     for i in below_thresh:
-        sim_word = ''
-        max_sim = 0
+        sim_word = i
+        # TODO: come up with a better way to tackle below_thresh but completely different values
+        max_sim = 0.45
         for j in above_thresh:
             similarity = SequenceMatcher(None, i, j).quick_ratio()
             if similarity > max_sim:
                 sim_word = j
                 max_sim = similarity
-        above_thresh.append(sim_word)
-    return pd.DataFrame(above_thresh)
+        df = df.replace(to_replace=i, value=sim_word)
+    return df
 
 
 def match_distribution(nr_sim, nr_total, probs):
     """ Calculate which pre-defined distribution is the closest to the distribution of the given list.
 
     :param nr_sim: the number of times the multinomial distribution is simulated.
-    :param nr_total: number of entries in our original DataFrame.
+    :param nr_total: the number of entries in our original DataFrame.
     :param probs: a list of probabilities for each unique entry to occur.
     :return: 'Ordinal' if the smallest distance value is contained within list{ordinal}, 'Categorical' otherwise.
     """
@@ -86,43 +89,45 @@ def match_distribution(nr_sim, nr_total, probs):
     # Calculate the distance between 14 pre-defined distributions that characterize ordinal data
     ordinal_distributions = OrdinalDistribution(len(probs))
     ordinal = [jensenshannon(probs, x) for x in list(vars(ordinal_distributions).values())]
-
+    print(ordinal, avg_cat)
     # Return the name of the most fitting distribution
-    for distance in ordinal:
-        if distance < avg_cat:
-            return 'Ordinal'
-    return 'Categorical'
+    if min(ordinal) < avg_cat:
+        return 'Ordinal'
+    else:
+        return 'Categorical'
 
 
 def run_inference(df):
     """ Call this method to run the statistical inference steps.
 
-    :param df: pandas DataFrame containing the string column
-    :return: TODO
+    :param df: a pandas DataFrame containing the string column.
+    :return: a string indicating whether the inferred distribution is categorical or ordinal.
     """
     # Retrieve the number of unique entries in the DataFrame
     total = df.count().values[0]
     print('Number of unique entries:', total)
 
     # Retrieve the % occurrence for each unique entry
-    unique_counts = df.value_counts(normalize=True)
+    unique_counts = df.value_counts(normalize=True, sort=False)
     print('Probabilities for each entry:\n', unique_counts)
 
     # Cluster similar values (to tackle outliers)
-    clusters = convert_similar(unique_counts)
+    clusters = generate_clusters(df)
+    print('after clustering:\n', clusters)
 
     # Recalculate the % occurrence for each unique entry
-    probs = clusters.value_counts(normalize=True)
+    probs = clusters.value_counts(normalize=True, sort=False)
     print('Probabilities for clustered entries:\n', probs)
 
     # Calculate which pre-defined distribution comes closest to the given data distribution
     distribution = match_distribution(10, total, probs)
     print('Inferred distribution:', distribution)
+    return distribution
 
 
 # Test run #
 test = ['John', 'John', 'john', 'joh', 'John', 'Johnny', 'Jon', 'Stef', 'Stef', 'Stef', 'staf', 'sted',
         'stf', 'stofn', 'nick', 'Nick', 'dick', 'jick', 'sick', 'Nick', 'Nick', 'Nicky', 'Niuck']
-test_df = pd.DataFrame(test)
-print(test_df)
-run_inference(test_df)
+# test_df = pd.DataFrame(test)
+# print(test_df)
+# run_inference(test_df)

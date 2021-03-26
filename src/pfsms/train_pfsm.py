@@ -125,7 +125,7 @@ ptype = Ptype()
 names = ['email', 'sentence', 'coordinate', 'day', 'filepath', 'month', 'ordinal', 'url']
 train, test, columns = load_data(names)
 
-# Load the machines to train/test
+# Create the machines to train/test
 machines = [create_pfsm.Email(), create_pfsm.Sentence(),
             create_pfsm.Coordinate(), create_pfsm.Day(),
             create_pfsm.Filepath(), create_pfsm.Month(),
