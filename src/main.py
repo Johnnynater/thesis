@@ -1,4 +1,5 @@
-from src import infer_ptype, infer_stattype, heuristics
+from src import infer_ptype, infer_stattype, encode
+from src.gbc import heuristics
 import pandas as pd
 
 
@@ -7,18 +8,19 @@ def load_dataset():
 
 
 def inference_ptype(data):
-    return infer_ptype.infer_ptype(data)
+    return infer_ptype.infer(data)
 
 
 def inference_statistical_type(data):
-    result = []
-    for col in data:
-        result.append(infer_stattype.run_inference(data[col].to_frame()))
-    return result
+    # result = []
+    # for col in data:
+    #     result.append(infer_stattype.run_inference(data[col].to_frame()))
+    # return result
+    return infer_stattype.infer(data)
 
 
 def inference_heuristics(data):
-    return heuristics.run_heuristics(data)
+    return heuristics.run(data)
 
 
 def handle_outliers():
@@ -30,7 +32,8 @@ def handle_missing():
 
 
 def apply_encoding():
-    pass
+    return
+
 
 
 def output_dataset():
@@ -45,7 +48,7 @@ if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
     load_dataset()
-    data = pd.read_csv('datasets/xAPI-Edu-Data.csv')
+    data = pd.read_csv('datasets/WA_Fn-UseC_-HR-Employee-Attrition.csv')
 
     # Infer data type
     schema, names = inference_ptype(data)
@@ -58,20 +61,34 @@ if __name__ == "__main__":
     string_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] in names]]
     print(string_cols)
 
-    # If cannot infer using given PFSMs, infer categorical / ordinal / continuous
-    print(inference_statistical_type(string_cols))
+    # If cannot infer using given PFSMs, infer nominal / ordinal
+    # print(inference_statistical_type(string_cols))
 
-    # Additionally: try to infer the type using heuristics
-    inference_heuristics(string_cols)
+    # If cannot infer using given PFSMs, gather features and infer nominal / ordinal using GradientBoostingClassifier
+    results_heur = inference_heuristics(string_cols)
+    results_gbc = inference_statistical_type(results_heur)
+    # 0 = ordinal, 1 = nominal
+    print(results_gbc)
+
+
+    # Encode the string columns based on the results from the GBC
+    for column, pred in zip(string_cols, results_gbc):
+        encoded_column = encode.run(string_cols[column], pred)
+        encoded_column = [encoded_column[i] for i in range(len(encoded_column))]
+        string_cols.loc[:, column] = encoded_column
+    print(string_cols.to_string())
+
+
+
 
     # Remove or repair any detected outliers
-    handle_outliers()
+    # handle_outliers()
 
     # Fill in any missing values
-    handle_missing()
+    # handle_missing()
 
     # Encode (if desired)
-    apply_encoding()
+    # apply_encoding()
 
     # Output the cleaned dataset
     output_dataset()

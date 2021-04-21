@@ -2,7 +2,7 @@ from ptype.Ptype import Ptype
 import pickle as pkl
 
 
-def infer_ptype(data):
+def infer(data):
     ptype = Ptype()
     names = ['email', 'sentence', 'coordinate', 'day', 'filepath', 'month', 'ordinal', 'url']
     for name in names:

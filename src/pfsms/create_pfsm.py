@@ -42,7 +42,7 @@ class Filepath(Machine):
         self.copy_to_z()
         # print(self.T)
 
-
+# TODO: Jan / Feb / etc are wonky. e.g.: Feb-62 is no match. Same goes for "1962, February"
 class Month(Machine):
     def __init__(self):
         super().__init__()
