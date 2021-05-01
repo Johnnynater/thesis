@@ -85,3 +85,4 @@ class URL(Machine):
         # print(self.T)
 
 # TODO: Range pfsm? e.g. 100-500, <10, >10, 100+
+# TODO: Zipcode pfsm. See https://stackoverflow.com/questions/578406/what-is-the-ultimate-postal-code-and-zip-regex
