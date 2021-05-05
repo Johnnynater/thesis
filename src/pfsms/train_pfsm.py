@@ -78,6 +78,7 @@ def setup_machines(machines, names):
     for machine, name in zip(machines, names):
         ptype.types.append(name)
         ptype.machines.forType[name] = machine
+    print(ptype.machines.forType)
 
 
 def train_machines(dataset, columns, epochs):
@@ -122,14 +123,18 @@ def test_machines(data):
 ptype = Ptype()
 
 # Load required data
-names = ['email', 'sentence', 'coordinate', 'day', 'filepath', 'month', 'ordinal', 'url']
+names = ['numerical']#'coordinate', 'day', 'email', 'filepath', 'month', 'numerical', 'ordinal', 'sentence', 'url', 'zipcode']
 train, test, columns = load_data(names)
 
 # Create the machines to train/test
-machines = [create_pfsm.Email(), create_pfsm.Sentence(),
-            create_pfsm.Coordinate(), create_pfsm.Day(),
-            create_pfsm.Filepath(), create_pfsm.Month(),
-            create_pfsm.OrdinalNumbers(), create_pfsm.URL()]
+machines = [
+    #create_pfsm.Coordinate(), create_pfsm.Day(),
+    #create_pfsm.Email(), create_pfsm.Filepath(),
+    #create_pfsm.Month(), create_pfsm.Numerical(),
+    #create_pfsm.OrdinalNumbers(), create_pfsm.Sentence(),
+    #create_pfsm.URL(), create_pfsm.Zipcode(),
+create_pfsm.Numerical()
+]
 
 setup_machines(machines, names)
 
@@ -137,6 +142,6 @@ setup_machines(machines, names)
 # ptype.machines.types.remove('string')
 # del ptype.machines.forType['string']
 
-train_machines(train, columns, 200)
+# train_machines(train, columns, 200)
 test_machines(test)
-# save_machines(names)
+save_machines(names)

@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
     load_dataset()
-    data = pd.read_csv('datasets/fifa.csv')
+    data = pd.read_csv('datasets/winemag-data-130k-v2.csv')
 
     # Infer data / string type using ptype
     schema, names = inference_ptype(data)
@@ -103,9 +103,6 @@ if __name__ == "__main__":
 
     # Remove or repair any detected outliers
     # handle_outliers()
-
-    # Encode (if desired)
-    # apply_encoding()
 
     # Output the cleaned dataset
     output_dataset()
