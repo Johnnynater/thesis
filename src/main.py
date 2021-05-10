@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
     load_dataset()
-    data = pd.read_csv('datasets/winemag-data-130k-v2.csv')
+    data = pd.read_csv('datasets/gbc_data/diamonds.csv')
 
     # Infer data / string type using ptype
     schema, names = inference_ptype(data)
@@ -86,6 +86,7 @@ if __name__ == "__main__":
     string_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] == 'string']]
 
     # Process unique strings etc
+    # TODO: return whether columns need to be encoded + which encoding they need
     unique_string_cols = apply_process_unique(unique_string_cols, stringtypes)
     print('wassup', unique_string_cols)
 

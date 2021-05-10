@@ -119,10 +119,9 @@ little_quantifiers = [
 superlatives = [
     ['good', 'better', 'best'],
     ['bad', 'worse', 'worst'],
-    ['much', 'more', 'most'],
+    ['much', 'many', 'more', 'most'],
     ['far', 'farther', 'further', 'farthest', 'furthest'],
     ['less', 'lesser', 'least'],
-    ['many', 'more', 'most'],
     ['well', 'better', 'best']
 ]
 
