@@ -41,7 +41,11 @@ ordinal_keywords = [
     'much', 'many', 'more', 'most', 'far', 'less', 'lesser', 'least', 'well', 'better', 'best'
 ]
 
-embeddings = pkl.load(open(f'datasets/6B.50_glove.pkl', 'rb'))
+# Since the file size of the original embeddings is too big, I have to split the dict into two separate dicts
+# embeddings = pkl.load(open(f'datasets/6B.50_glove.pkl', 'rb'))
+fh_emb = pkl.load(open(f'datasets/50_glove_1.pkl', 'rb'))
+sh_emb = pkl.load(open(f'datasets/50_glove_2.pkl', 'rb'))
+embeddings = fh_emb | sh_emb
 
 
 def ratio_check(nr_unique, nr_total):
