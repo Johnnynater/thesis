@@ -70,8 +70,8 @@ class Numerical(Machine):
     def __init__(self):
         super().__init__()
         self.STOP_P = 1e-4
-        self.pfsm_from_fsm(r"([0-9]+[\-+_/:;&'][0-9]+)|(([<>$#@%]|((less|lower|greater|higher) than ?)"
-                           r"|(under ?|below ?|over ?|above ?))[0-9]+)|([0-9]+[<>+$%])")
+        self.pfsm_from_fsm(r"([0-9]+ ?[\-+_/:;&'(to)] ?[0-9]+)|(([<>$#@%]|(less|lower|greater|higher) than"
+                           r"|(under|below|over|above)) ?[0-9]+)|([0-9]+ ?[<>+$%])")
         self.create_T_new()
         self.copy_to_z()
         # print(self.T)

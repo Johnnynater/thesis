@@ -1,6 +1,7 @@
-import re
 import math
 import nltk
+import re
+import numpy as np
 import pandas as pd
 from functools import partial
 from geopy.geocoders import Nominatim
@@ -11,10 +12,9 @@ def calculate_xyz(ll):
     """ Convert (GPS) coordinates to (X, Y, Z) coordinates. Inspired by Nat Wilson's post at
     https://gis.stackexchange.com/questions/212723/how-can-i-convert-lon-lat-coordinates-to-x-y
 
-    :param ll: list of latitude/longitude values.
-    :return: [x-coordinate, y-coordinate, z-coordinate] of each latitude/longitude value.
+    :param ll: a list of latitude/longitude values.
+    :return: a list [x-coordinate, y-coordinate, z-coordinate] of each latitude/longitude value.
     """
-
     x = math.sin(math.pi / 2 - ll[0]) * math.cos(ll[1])
     y = math.sin(math.pi / 2 - ll[0]) * math.sin(ll[1])
     z = math.cos(math.pi / 2 - ll[0])
@@ -22,18 +22,16 @@ def calculate_xyz(ll):
 
 
 def process_coordinate(df, orig_df):
-    """ Processes coordinates into multiple useful features
+    """ Process coordinates into multiple useful features.
 
-    :param df: pandas DataFrame containing coordinate data (unique values only)
-    :param orig_df: pandas DataFrame containing the original coordinate column
-    :return: pandas DataFrame consisting of latlong, zipcodes, country_codes, and xyz-coordinates
+    :param df: a pandas DataFrame containing coordinate data (unique values only).
+    :param orig_df: a pandas DataFrame containing the original coordinate column.
+    :return: a pandas DataFrame consisting of latlong, zipcodes, country_codes, and xyz-coordinates; a (list of) int(s)
+             indicating the encoding type(s) required.
     """
     # Set up additional columns that will be returned alongside the transformed coordinates
     latlong = list(df.values.flatten())
-    changes = {}
-    changes_country = {}
-    changes_xyz = {}
-    changes_zipcode = {}
+    changes, changes_country, changes_xyz, changes_zipcode = {}, {}, {}, {}
 
     # To check whether we are dealing with coordinate pairs or not
     single_coord = True
@@ -44,7 +42,7 @@ def process_coordinate(df, orig_df):
 
     for i in range(len(latlong)):
         # Separate values into parts that are easier to work with
-        val = re.split('([NSZEOW])', latlong[i])
+        val = re.split('[NSZEOW]', latlong[i])
         val = val[1:]
         val = [val[j].split('.') for j in range(len(val))]
 
@@ -100,43 +98,55 @@ def process_coordinate(df, orig_df):
 
     # Replace the original values for the encoded ones
     orig_df = orig_df.replace({df.columns[0]: {df.columns[0]: changes}})
-    return orig_df
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    if single_coord:
+        return orig_df, 2
+    else:
+        return orig_df, [2, 1, 1, 2]
 
 
 def process_day(df):
-    """ Processes days into easy-to-encode strings. We assume that strings representing days are always at the front.
+    """ Process days into easy-to-encode strings. We assume that strings representing days are always at the front.
 
-    :param df: pandas DataFrame containing strings representing days.
-    :return: pandas DataFrame containing strings representing abbreviated days.
+    :param df: a pandas DataFrame containing strings representing days.
+    :return: a pandas DataFrame containing strings representing abbreviated days; an int indicating the encoding type
+             required.
     """
-    return df[df.columns[0]].str[:2]
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return df[df.columns[0]].str[:2], 1
 
 
 def process_email(df):
-    """ Processes e-mails into easy-to-encode strings with (possibly) enhanced properties.
+    """ Process e-mails into easy-to-encode strings with (possibly) enhanced properties.
 
-    :param df: pandas DataFrame containing strings representing e-mails.
-    :return: dict that maps the old values to the new values.
+    :param df: a pandas DataFrame containing strings representing e-mails.
+    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
     """
     emails = list(df.values.flatten())
     changes = {}
+
     for i in range(len(emails)):
+        # Split between name and domain of e-mail + remove top-level domains
         val = emails[i].split("@", 1)
         val[1] = val[1].split(".", 1)[0]
         val = " ".join(val)
         changes[emails[i]] = val
-    return changes
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return changes, 1
 
 
 def process_filepath_url(df, type):
-    """ Processes filepaths and URLs into easy-to-encode strings with (possibly) enhanced properties.
+    """ Process filepaths and URLs into easy-to-encode strings with (possibly) enhanced properties.
 
-    :param df: pandas DataFrame containing strings representing filepaths or URLs.
-    :param type: string containing whether the column contains 'filepath' or 'url' values.
-    :return: pandas DataFrame containing easy-to-encode filepath strings.
+    :param df: a pandas DataFrame containing strings representing filepaths or URLs.
+    :param type: a string containing whether the column contains 'filepath' or 'url' values.
+    :return: a pandas DataFrame containing easy-to-encode filepath strings; an int indicating the encoding type req.
     """
     data = list(df.values.flatten())
     changes = {}
+
     for i in range(len(data)):
         val = data[i]
         if type == 'url':
@@ -146,29 +156,117 @@ def process_filepath_url(df, type):
         val = list(filter(lambda a: a != "", val))
         val = " ".join(val)
         changes[data[i]] = val
-    return changes
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return changes, 1
 
 
-# TODO: change this probably when we adjust our pfsm
 def process_month(df):
-    """ Processes months into easy-to-encode strings. We assume that strings representing months are always at the
+    """ Process months into easy-to-encode strings. We assume that strings representing months are always at the
     front.
 
-    :param df: pandas DataFrame containing strings representing months.
-    :return: pandas DataFrame containing strings representing abbreviated months.
+    :param df: a pandas DataFrame containing strings representing months.
+    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
     """
-    return df[df.columns[0]].str[:3]
+    months = list(df.values.flatten())
+    changes = {}
+
+    # Mapping from months to numerical / encoded values
+    month_to_int = {
+        'jan': ['01', '000000000001'],
+        'feb': ['02', '000000000010'],
+        'mar': ['03', '000000000100'],
+        'apr': ['04', '000000001000'],
+        'may': ['05', '000000010000'],
+        'jun': ['06', '000000100000'],
+        'jul': ['07', '000001000000'],
+        'aug': ['08', '000010000000'],
+        'sep': ['09', '000100000000'],
+        'oct': ['10', '001000000000'],
+        'nov': ['11', '010000000000'],
+        'dec': ['12', '100000000000']
+    }
+
+    for i in range(len(months)):
+        # Set the dd/mmm/yy variables and split the data based on characters in each value
+        dd, mmm, yy = '', '', ''
+        split_vals = re.split('[,.\-_ ]', months[i])
+
+        if len(split_vals) == 1:
+            # Having only one value in split_vals implies we are only dealing with months
+            # (because of how the pfsm works).
+            changes[months[i]] = month_to_int[months[i][:3].lower()][1]
+        elif len(split_vals) == 2:
+            # Having two values in split_vals almost always implies that the data contains month + year
+            for val in split_vals:
+                if val[0] == '\'':
+                    yy = val[1:]
+                elif val.isdigit():
+                    yy = val[2:]
+                else:
+                    mmm = val[:3]
+            changes[months[i]] = int(yy + month_to_int[mmm.lower()][0] + '01')
+        else:
+            # Having >2 values in split_vals means that we are dealing with day + month + year
+            for val in split_vals:
+                print(val)
+                if val[0] == '\'':
+                    yy = val[1:]
+                elif val.isdigit():
+                    if len(val) == 4:
+                        yy = val[2:]
+                    # TODO: improve this int(val) > 28 constraint
+                    elif int(val) > 28 or dd != '':
+                        yy = val
+                    else:
+                        dd = val
+                else:
+                    mmm = val[:3]
+            changes[months[i]] = int(yy + month_to_int[mmm.lower()][0] + dd)
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return changes, 2
+
+
+def process_numerical(df):
+    """ Convert numerical strings (such as ranges, units, etc.) into ordinally-encoded data.
+
+    :param df: a pandas DataFrame containing strings representing numerical values.
+    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
+    """
+    nums = list(df.values.flatten())
+    processed_nums = []
+
+    for i in range(len(nums)):
+        if re.fullmatch('[0-9]+ ?[-:_/(to)] ?[0-9]+', nums[i]):
+            # Take the mean of the range
+            digits = np.mean([int(s) for s in re.split(' ?[-:_/(to)] ?', nums[i]) if s.isdigit()])
+            processed_nums.append([nums[i], digits])
+        else:
+            # only take the relevant numbers
+            digits = int(''.join([s for s in nums[i] if s.isdigit()]))
+            processed_nums.append([nums[i], digits])
+
+    # Sort the data based on the processed numbers
+    processed_nums.sort(key=lambda x: x[1])
+
+    # Map the original values to the (ordinal encoded) values
+    changes = {processed_nums[i][0]: i for i in range(len(processed_nums))}
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return changes, 2
 
 
 def process_ordinal(df):
-    """ Processes strings representing rank into ordinal-encoded numbers, adhering to the rank.
+    """ Process strings representing rank into ordinal-encoded numbers, adhering to the rank.
 
-    :param df: pandas DataFrame containing strings representing ordered numbers.
-    :return: dict that maps the old values to the new values.
+    :param df: a pandas DataFrame containing strings representing ordered numbers.
+    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
     """
     ordinals = list(df.values.flatten())
     original_ord = ordinals.copy()
     changes = {}
+
     # Set up a small dictionary of ordered words that are irregular
     irreg_ord_dict = {
         'first': 'one',
@@ -196,45 +294,46 @@ def process_ordinal(df):
         # Use word2number to translate (spelled-out) string numbers directly to integer numbers
         ordinals[i] = w2n.word_to_num(ordinals[i])
         changes[original_ord[i]] = ordinals[i]
-    return changes
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return changes, 2
 
 
 # TODO: add sentence/word embeddings to it as well
 def process_sentence(df):
-    """ Processes sentences into a list of nouns for easier encoding.
+    """ Process sentences into a list of nouns for easier encoding.
 
-    :param df: pandas DataFrame containing sentences.
-    :return: dict that maps the old values to the new values.
+    :param df: a pandas DataFrame containing sentences.
+    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
     """
     sentences = list(df.values.flatten())
     changes = {}
+
     for sent in sentences:
         # Using straight-up nltk word tokenizer
         tokenized = nltk.word_tokenize(sent)
         nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if pos == 'NN']
         changes[sent] = " ".join(nouns)
-    return changes
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return changes, 1
 
 
 def process_zipcode(df, orig_df):
-    """ Processes coordinates into multiple useful features.
+    """ Process coordinates into multiple useful features.
 
-    :param df: pandas DataFrame containing strings representing zipcodes.
-    :param orig_df: pandas DataFrame containing the original zipcode column.
-    :return: pandas DataFrame consisting of zipcodes, latlong, country_codes, and xyz-coordinates.
+    :param df: a pandas DataFrame containing strings representing zipcodes.
+    :param orig_df: a pandas DataFrame containing the original zipcode column.
+    :return: a pandas DataFrame consisting of zipcodes, latlong, country_codes, and xyz-coordinates; a (list of) int(s)
+             indicating the encoding type(s) required.
     """
-    zipcodes = list(df.values.flatten())
-
     # Instantiate geopy session
     geolocator = Nominatim(user_agent='my-app')
     reverse = partial(geolocator.reverse)
 
-    # Create new dictionary for each feature
-    changes = {}
-    changes_latlong = {}
-    changes_xyz = {}
-    changes_country = {}
-    changes_city = {}
+    # Flatten dataframe to list + create new dictionary for each feature
+    zipcodes = list(df.values.flatten())
+    changes, changes_city, changes_country, changes_latlong, changes_xyz = {}, {}, {}, {}, {}
 
     for i in range(len(zipcodes)):
         # Remove any spaces (this is basically all the pre-processing we need for just zipcodes)
@@ -251,7 +350,7 @@ def process_zipcode(df, orig_df):
         if 'city' in latlong_info['address']:
             city = latlong_info['address']['city']
         else:
-            city = 'Unknown'
+            city = 'unknown'
 
         # Insert the obtained values in the corresponding dicts
         changes_city[zipcodes[i]] = city
@@ -266,24 +365,30 @@ def process_zipcode(df, orig_df):
     orig_df[str(df.columns[0]) + '_country'] = orig_df[df.columns[0]].map(changes_country)
     orig_df[str(df.columns[0]) + '_latlong'] = orig_df[df.columns[0]].map(changes_latlong)
     orig_df[str(df.columns[0]) + '_xyz'] = orig_df[df.columns[0]].map(changes_xyz)
-    return orig_df
+
+    # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
+    return orig_df, [1, 1, 2, 1]
 
 
 def run(df, stringtype):
-    """ Handles the processing of data in a unique string column into easy-to-encode (+ enhanced) data.
+    """ Handle the processing of data in a unique string column into easy-to-encode (+ enhanced) data.
 
-    :param df: pandas DataFrame containing the unique string column.
-    :param stringtype: string indicating which unique string column df is.
-    :return: pandas DataFrame consisting of column(s) containing processed (+ additional) data.
+    :param df: a pandas DataFrame containing the unique string column.
+    :param stringtype: a string indicating which unique string column df is.
+    :return: a pandas DataFrame consisting of column(s) containing processed (+ additional) data; a (list of) int(s)
+             indicating the encoding type(s) required.
     """
-    if stringtype in ['day', 'month']:
+    if stringtype in ['day']:
         return eval('process_{}(df)'.format(stringtype))
     else:
         df_unique = pd.DataFrame(df[df.columns[0]].unique(), columns=[df.columns[0]])
         if stringtype in ['filepath', 'url']:
-            result = process_filepath_url(df_unique, stringtype)
+            result, encode = process_filepath_url(df_unique, stringtype)
         elif stringtype in ['coordinate', 'zipcode']:
-            return eval('process_{}(df_unique, df)'.format(stringtype))
+            result, encode = eval('process_{}(df_unique, df)'.format(stringtype))
+            return result, encode
         else:
-            result = eval('process_{}(df_unique)'.format(stringtype))
-        return df.replace({df.columns[0]: result})
+            result, encode = eval('process_{}(df_unique)'.format(stringtype))
+        return df.replace({df.columns[0]: result}), encode
+
+# data = pd.DataFrame(['<100', 'over 600', 'over 600', '100-300', '300-600'])

@@ -14,10 +14,10 @@ def load_data(names):
     train_data, test_data, column_labels = [], [], []
     for name in names:
         # Applying temp and removing the last char is needed to remove \n for each entry
-        tmp = list(open('datasets/%s_train.csv' % name))
+        tmp = list(open('datasets/pfsm_data/%s_train.csv' % name))
         train_data.append([tmp[i][:-1] for i in range(len(tmp))])
 
-        tmp = list(open('datasets/%s_test.csv' % name))
+        tmp = list(open('datasets/pfsm_data/%s_test.csv' % name))
         test_data.append([tmp[i][:-1] for i in range(len(tmp))])
 
         column_labels.append([name])

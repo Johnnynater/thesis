@@ -55,8 +55,8 @@ def get_word_variations(words):
 def determine_order(values):
     """ Determine the word order based on flair's LSTM.
 
-    :param values:
-    :return: A list containing the determined order
+    :param values: a pandas
+    :return: a list containing the determined order.
     """
     # Check "Notes 19-04.docx" initial idea for implementation details
     # FOR NOW: use flair to determine word order
@@ -77,20 +77,18 @@ def determine_order(values):
 
 
 def run(column, encode_type):
-    if encode_type == 1:
-        if column.value_counts().count() < 30:
-            enc = SimilarityEncoder()
-            return [x for x in enc.fit_transform(column.values.reshape((-1, 1)).astype(str))]
-        else:
-            enc = GapEncoder()
-            return [x for x in enc.fit_transform(column.astype(str))]
-    else:
+    if encode_type == 0:
         unique_entries = [item for item, _ in column.value_counts().iteritems()]
         order = determine_order(unique_entries)
-        # order.append(0)
         enc = OrdinalEncoder(categories=[order], handle_unknown='use_encoded_value', unknown_value=np.nan)
-        # column = column.fillna(value=0).to_frame()
-        return enc.fit_transform(column.to_frame())
+        return [x for x in enc.fit_transform(column.to_frame())]
+    else:
+        if column.value_counts().count() < 30:
+            enc = SimilarityEncoder()
+            return [x for x in enc.fit_transform(column.values.reshape((-1, 1)))]  # .astype(str)
+        else:
+            enc = GapEncoder()
+            return [x for x in enc.fit_transform(column)]  # .astype(str)
 
 
 # List of all types of quantifiers (split between little and large), taken from
@@ -124,5 +122,11 @@ superlatives = [
     ['less', 'lesser', 'least'],
     ['well', 'better', 'best']
 ]
-
-# print(determine_order(['better', 'best', 'good']))
+# import pandas as pd
+# # print(determine_order(['better', 'best', 'good']))
+# column = pd.Series(['<100', 'over 600', 'over 600', '100-300', '300-600'])
+# cool1 = [item for item, _ in column.value_counts().iteritems()]
+# cool2 = list(column.values.flatten())
+# print(cool1)
+# print(cool2)
+# print(run(column, 1))
