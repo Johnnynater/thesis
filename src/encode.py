@@ -1,11 +1,10 @@
+import flair
 import re
 import numpy as np
 from dirty_cat import SimilarityEncoder, MinHashEncoder, GapEncoder
 from sklearn.preprocessing import OrdinalEncoder
 from nltk.corpus import wordnet as wn
 # from nltk.stem.wordnet import WordNetLemmatizer
-
-import flair
 
 
 def get_word_variations(words):
@@ -14,7 +13,7 @@ def get_word_variations(words):
         'superlatives': set()
     }
     # Make sure to separate words if there is more than one
-    words = re.split(' |-|_', words)
+    words = re.split('[ \-_]', words)
 
     for word in words:
         # Retrieve antonyms
@@ -55,7 +54,7 @@ def get_word_variations(words):
 def determine_order(values):
     """ Determine the word order based on flair's LSTM.
 
-    :param values: a pandas
+    :param values: a pandas DataFrame consisting of the unique values of the column.
     :return: a list containing the determined order.
     """
     # Check "Notes 19-04.docx" initial idea for implementation details
@@ -63,7 +62,7 @@ def determine_order(values):
     flair_sentiment = flair.models.TextClassifier.load('en-sentiment')
     results = []
     for value in values:
-        #variations = get_word_variations(value)
+        # variations = get_word_variations(value)
         s = flair.data.Sentence(value)
         flair_sentiment.predict(s)
         total_sentiment = s.labels
@@ -77,18 +76,27 @@ def determine_order(values):
 
 
 def run(column, encode_type):
+    """ Run the heuristics on string encoding.
+
+    :param column: a pandas DataFrame consisting of the column to be encoded.
+    :param encode_type: an Integer indicating whether the column needs ordinal or nominal encoding.
+    :return: a Dictionary consisting of the mappings String -> Float/List.
+    """
     if encode_type == 0:
+        # Ordinal encoding required. Determine the order and encode accordingly
         unique_entries = [item for item, _ in column.value_counts().iteritems()]
         order = determine_order(unique_entries)
         enc = OrdinalEncoder(categories=[order], handle_unknown='use_encoded_value', unknown_value=np.nan)
-        return [x for x in enc.fit_transform(column.to_frame())]
     else:
         if column.value_counts().count() < 30:
+            # Data has low cardinality. Encode using SimilarityEncoder
             enc = SimilarityEncoder()
-            return [x for x in enc.fit_transform(column.values.reshape((-1, 1)))]  # .astype(str)
         else:
+            # Data has high cardinality. Encode using GapEncoder
             enc = GapEncoder()
-            return [x for x in enc.fit_transform(column)]  # .astype(str)
+    return dict({
+        x: (y[0] if encode_type == 0 else y) for x, y in zip(column, enc.fit_transform(column.to_frame()))
+    })
 
 
 # List of all types of quantifiers (split between little and large), taken from

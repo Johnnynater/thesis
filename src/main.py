@@ -1,6 +1,5 @@
-from src import infer_ptype, infer_stattype, process_stringtype, encode
+from src import infer_ptype, infer_stattype, process_stringtype, encode, handle_missing
 from src.gbc import heuristics
-from sklearn.impute import SimpleImputer
 import pandas as pd
 import numpy as np
 
@@ -21,13 +20,20 @@ def inference_heuristics(df):
     return heuristics.run(df)
 
 
-def handle_outliers():
+def handle_outlier_vals():
     pass
 
 
-def handle_missing(column, type, missing, names):
-    imp_freq = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-    return imp_freq.fit_transform(column)
+def handle_missing_vals(df, datatypes, missing_vals, names):
+    any_missing = False
+    for col, missing in zip(df, missing_vals):
+        if missing:
+            any_missing = True
+            df[col].fillna(value=np.nan, inplace=True)
+            df[col].replace(to_replace=missing, value=np.nan, inplace=True)
+    if any_missing:
+        df = handle_missing.run(df, datatypes, names)
+    return df
 
 
 def apply_process_unique(df, stringtypes):
@@ -45,35 +51,31 @@ def apply_process_unique(df, stringtypes):
     return processed_df, require_encoding
 
 
-def apply_encoding(cols, results):
+def apply_encoding(df, results):
     # Encode the string columns based on the results from the GBC
-    for col, val in zip(cols, results):
-        if val == 2:
-            continue
-        else:
-            cols.loc[:, col] = encode.run(cols[col], val)  # encoded column
-    return cols
+    for col, val in zip(df, results):
+        if val != 2:
+            #df.loc[:, col] = encode.run(df[col], val)  # encoded column
+            df[col] = df[col].map(encode.run(df[col], val))
+    return df
 
 
 if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
-    data = pd.read_csv('datasets/gbc_data/diamonds.csv')
-
+    data = pd.read_csv('datasets\gbc_data\winemag-data-130k-v2.csv')  # diamonds.csv
+    # data = data.iloc[:1000, :]
     # Infer data / string type using ptype
     schema, names = inference_ptype(data)
     # names.append('string')
     datatypes = [col.type for _, col in schema.cols.items()]
     missing_vals = [col.get_na_values() for _, col in schema.cols.items()]
     print(schema.show().to_string())
-    # print(missing_vals)
+    print(missing_vals)
     print(names)
 
-    # TODO: put the for loop inside of the handle_missing method
-    for column, stringtype, missing in zip(data, datatypes, missing_vals):
-        # Fill in any missing values
-        if missing:
-            data[column] = handle_missing(data[column].to_frame(), stringtype, missing, names)
+    # Impute missing values
+    data = handle_missing_vals(data, datatypes, missing_vals, names)
 
     # Take the columns that were inferred as a string (feature)
     # string_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] in names]]
@@ -101,6 +103,6 @@ if __name__ == "__main__":
     unique_string_cols = apply_encoding(unique_string_cols, require_encoding)
 
     result = pd.concat([other_cols, string_cols, unique_string_cols], axis=1)
-    print(string_cols['cut'])
     # Remove or repair any detected outliers
     # handle_outliers()
+    print(result.iloc[:10, :].to_string())

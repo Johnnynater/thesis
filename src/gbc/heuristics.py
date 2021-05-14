@@ -52,9 +52,9 @@ def ratio_check(nr_unique, nr_total):
     """ Check what the ratio between unique values and the number of entries is. This can help with determining order
     in the data, as ordered data (e.g., Likert-scale data) have a limited number of unique entries.
 
-    :param nr_unique: an integer value of the number of unique entries.
-    :param nr_total: an integer value of the number of entries.
-    :return: a float containing the ratio between unique values and total number of values.
+    :param nr_unique: an Integer representing the number of unique entries.
+    :param nr_total: an Integer representing the number of entries.
+    :return: a Float representing the ratio between unique values and total number of values.
     """
     # ratio = nr_unique / nr_total
 
@@ -82,8 +82,8 @@ def ratio_check(nr_unique, nr_total):
 def distance_check(df):
     """ Calculate the mean variance of the word embedding of all entries.
 
-    :param df: a pandas DataFrame.
-    :return: a float containing the mean variance of all entries.
+    :param df: a pandas DataFrame consisting of unique String entries.
+    :return: a Float representing the mean variance of all embedded String entries.
     """
     mean_words = []
     for item, _ in df.iteritems():
@@ -109,8 +109,9 @@ def name_check(column_name):
     Often times, it can be determined what type of encoding a column needs by solely looking at the name of the column.
     For example, names such as 'location', 'city', and 'country' often require categorical encoding.
 
-    :param column_name: a string containing the column name.
-    :return: a pair of {0,1} indicating if the column name is a known nominal / ordinal name (1) or not (0).
+    :param column_name: a String representing the column name.
+    :return: a pair of Integers {0,1} indicating whether the column name is a known nominal / ordinal name (1)
+             or not (0).
     """
     column_name = column_name.lower()
     name_nom, name_ord = 0, 0  # False, False
@@ -130,8 +131,8 @@ def name_check(column_name):
 def keyword_check(df):
     """ Check whether entries contain certain keywords associated to data with or without order.
 
-    :param df: a pandas DataFrame.
-    :return: 1 if a sufficient amount of keywords are found, 0 otherwise
+    :param df: a pandas DataFrame consisting of unique String entries.
+    :return: 1 if a sufficient amount of keywords are found, 0 otherwise.
     """
     # TODO: maybe don't do it based on percentages, but just whenever we see one keyword
     # keyword_nom_count, keyword_ord_count = 0, 0
@@ -160,8 +161,8 @@ def keyword_check(df):
 def comstring_check(df):
     """ Check for common substrings between all unique entries.
 
-    :param df: a pandas DataFrame containing unique entries.
-    :return: 1 if a substring is found, 0 otherwise
+    :param df: a pandas DataFrame consisting of unique String entries.
+    :return: 1 if a substring was found, 0 otherwise.
     """
     labels = [x[0] for x in df.index.values.tolist()]
     substrings = []
@@ -205,7 +206,7 @@ def run(df):
     """ Run all the heuristics and save the result.
 
     :param df: a pandas DataFrame.
-    :return: a list containing results.
+    :return: a List of Floats/Integers containing results from each heuristic.
     """
     results = []
     for column in df:

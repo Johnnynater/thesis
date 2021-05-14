@@ -12,8 +12,8 @@ def calculate_xyz(ll):
     """ Convert (GPS) coordinates to (X, Y, Z) coordinates. Inspired by Nat Wilson's post at
     https://gis.stackexchange.com/questions/212723/how-can-i-convert-lon-lat-coordinates-to-x-y
 
-    :param ll: a list of latitude/longitude values.
-    :return: a list [x-coordinate, y-coordinate, z-coordinate] of each latitude/longitude value.
+    :param ll: a List of Floats representing latitude/longitude values.
+    :return: a List of Floats ([x-coordinate, y-coordinate, z-coordinate]) of each latitude/longitude value.
     """
     x = math.sin(math.pi / 2 - ll[0]) * math.cos(ll[1])
     y = math.sin(math.pi / 2 - ll[0]) * math.sin(ll[1])
@@ -24,10 +24,10 @@ def calculate_xyz(ll):
 def process_coordinate(df, orig_df):
     """ Process coordinates into multiple useful features.
 
-    :param df: a pandas DataFrame containing coordinate data (unique values only).
-    :param orig_df: a pandas DataFrame containing the original coordinate column.
-    :return: a pandas DataFrame consisting of latlong, zipcodes, country_codes, and xyz-coordinates; a (list of) int(s)
-             indicating the encoding type(s) required.
+    :param df: a pandas DataFrame consisting of Strings that represent coordinate data (unique values only).
+    :param orig_df: a pandas DataFrame consisting of the original coordinate column.
+    :return: a pandas DataFrame consisting of latlong, zipcodes, country_codes, and xyz-coordinates;
+             a (List of) Integer(s) indicating the encoding type(s) required for each column.
     """
     # Set up additional columns that will be returned alongside the transformed coordinates
     latlong = list(df.values.flatten())
@@ -107,11 +107,11 @@ def process_coordinate(df, orig_df):
 
 
 def process_day(df):
-    """ Process days into easy-to-encode strings. We assume that strings representing days are always at the front.
+    """ Process days into easy-to-encode strings. We assume that Strings that represent days are always at the front.
 
-    :param df: a pandas DataFrame containing strings representing days.
-    :return: a pandas DataFrame containing strings representing abbreviated days; an int indicating the encoding type
-             required.
+    :param df: a pandas DataFrame consisting of Strings that represent days.
+    :return: a pandas DataFrame consisting of Strings that represent abbreviated days;
+             an Integer indicating the encoding type required.
     """
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return df[df.columns[0]].str[:2], 1
@@ -120,8 +120,9 @@ def process_day(df):
 def process_email(df):
     """ Process e-mails into easy-to-encode strings with (possibly) enhanced properties.
 
-    :param df: a pandas DataFrame containing strings representing e-mails.
-    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
+    :param df: a pandas DataFrame consisting of Strings that represent e-mails.
+    :return: a Dictionary that maps the old values to the new values (String -> String);
+             an Integer representing the encoding type required.
     """
     emails = list(df.values.flatten())
     changes = {}
@@ -140,9 +141,10 @@ def process_email(df):
 def process_filepath_url(df, type):
     """ Process filepaths and URLs into easy-to-encode strings with (possibly) enhanced properties.
 
-    :param df: a pandas DataFrame containing strings representing filepaths or URLs.
-    :param type: a string containing whether the column contains 'filepath' or 'url' values.
-    :return: a pandas DataFrame containing easy-to-encode filepath strings; an int indicating the encoding type req.
+    :param df: a pandas DataFrame consisting of Strings that represent filepaths or URLs.
+    :param type: a String representing whether the column contains 'filepath' or 'url' entries.
+    :return: a pandas DataFrame consisting of easy-to-encode filepath or URL Strings;
+             an Integer representing the encoding type required.
     """
     data = list(df.values.flatten())
     changes = {}
@@ -162,11 +164,12 @@ def process_filepath_url(df, type):
 
 
 def process_month(df):
-    """ Process months into easy-to-encode strings. We assume that strings representing months are always at the
+    """ Process months into easy-to-encode strings. We assume that Strings that represent months are always at the
     front.
 
-    :param df: a pandas DataFrame containing strings representing months.
-    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
+    :param df: a pandas DataFrame consisting of Strings that represent months.
+    :return: a Dictionary that maps the old values to the new values (String -> String);
+             an Integer representing the encoding type required.
     """
     months = list(df.values.flatten())
     changes = {}
@@ -231,8 +234,9 @@ def process_month(df):
 def process_numerical(df):
     """ Convert numerical strings (such as ranges, units, etc.) into ordinally-encoded data.
 
-    :param df: a pandas DataFrame containing strings representing numerical values.
-    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
+    :param df: a pandas DataFrame consisting of Strings that represent numerical values.
+    :return: a Dictionary that maps the old values to the new values (String -> Integer);
+             an Integer representing the encoding type required.
     """
     nums = list(df.values.flatten())
     processed_nums = []
@@ -258,10 +262,11 @@ def process_numerical(df):
 
 
 def process_ordinal(df):
-    """ Process strings representing rank into ordinal-encoded numbers, adhering to the rank.
+    """ Process Strings that represent rank into ordinal-encoded numbers, adhering to the rank.
 
-    :param df: a pandas DataFrame containing strings representing ordered numbers.
-    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
+    :param df: a pandas DataFrame consisting of Strings that represent ordered numbers.
+    :return: a Dictionary that maps the old values to the new values (String -> Integer);
+             an Integer representing the encoding type required.
     """
     ordinals = list(df.values.flatten())
     original_ord = ordinals.copy()
@@ -303,8 +308,9 @@ def process_ordinal(df):
 def process_sentence(df):
     """ Process sentences into a list of nouns for easier encoding.
 
-    :param df: a pandas DataFrame containing sentences.
-    :return: a dict that maps the old values to the new values; an int indicating the encoding type required.
+    :param df: a pandas DataFrame consisting of Strings that represent sentences.
+    :return: a Dictionary that maps the old values to the new values (String -> String);
+             an Integer representing the encoding type required.
     """
     sentences = list(df.values.flatten())
     changes = {}
@@ -322,10 +328,10 @@ def process_sentence(df):
 def process_zipcode(df, orig_df):
     """ Process coordinates into multiple useful features.
 
-    :param df: a pandas DataFrame containing strings representing zipcodes.
-    :param orig_df: a pandas DataFrame containing the original zipcode column.
-    :return: a pandas DataFrame consisting of zipcodes, latlong, country_codes, and xyz-coordinates; a (list of) int(s)
-             indicating the encoding type(s) required.
+    :param df: a pandas DataFrame consisting of Strings that represent zipcodes.
+    :param orig_df: a pandas DataFrame consisting of Strings that represent the original zipcode column.
+    :return: a pandas DataFrame consisting of zipcodes, latlong, country_codes, and xyz-coordinates;
+             a (List of) Integers(s) indicating the encoding type(s) required for each column.
     """
     # Instantiate geopy session
     geolocator = Nominatim(user_agent='my-app')
@@ -373,10 +379,10 @@ def process_zipcode(df, orig_df):
 def run(df, stringtype):
     """ Handle the processing of data in a unique string column into easy-to-encode (+ enhanced) data.
 
-    :param df: a pandas DataFrame containing the unique string column.
-    :param stringtype: a string indicating which unique string column df is.
-    :return: a pandas DataFrame consisting of column(s) containing processed (+ additional) data; a (list of) int(s)
-             indicating the encoding type(s) required.
+    :param df: a pandas DataFrame consisting of unique String entries.
+    :param stringtype: a String indicating which unique String type the column df consists of.
+    :return: a pandas DataFrame consisting of column(s) containing processed (+ additional) data; a (List of) Integer(s)
+             indicating the encoding type(s) required for each column.
     """
     if stringtype in ['day']:
         return eval('process_{}(df)'.format(stringtype))
