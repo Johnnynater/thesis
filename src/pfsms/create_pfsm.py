@@ -87,11 +87,12 @@ class OrdinalNumbers(Machine):
         # print(self.T)
 
 
+# TODO: check for the optimal value for n in {{n,}}
 class Sentence(Machine):
     def __init__(self):
         super().__init__()
         self.STOP_P = 1e-4
-        self.pfsm_from_fsm(r'.*\s*([\w&.,;:?!/\-\s\(\){}]+[\s+.,;:?!%—–]+){{3,}}'
+        self.pfsm_from_fsm(r'.*\s*([\w&.,;:?!/\-\s\(\){}]+[\s+.,;:?!%—–]+){{6,}}'
                            r'([\w&.,;:?!/\-\(\){}]*|\s)*.*'.format(spec_char, spec_char))
         self.create_T_new()
         self.copy_to_z()

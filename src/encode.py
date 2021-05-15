@@ -85,6 +85,7 @@ def run(column, encode_type):
     if encode_type == 0:
         # Ordinal encoding required. Determine the order and encode accordingly
         unique_entries = [item for item, _ in column.value_counts().iteritems()]
+        # TODO: consider LSTM/heuristics hybrid
         order = determine_order(unique_entries)
         enc = OrdinalEncoder(categories=[order], handle_unknown='use_encoded_value', unknown_value=np.nan)
     else:

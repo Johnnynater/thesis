@@ -1,4 +1,4 @@
-from src import infer_ptype, infer_stattype, process_stringtype, encode, handle_missing
+from src import infer_ptype, infer_stattype, process_stringtype, encode, handle_missing, handle_outliers
 from src.gbc import heuristics
 import pandas as pd
 import numpy as np
@@ -20,8 +20,8 @@ def inference_heuristics(df):
     return heuristics.run(df)
 
 
-def handle_outlier_vals():
-    pass
+def handle_outlier_vals(df, dts, outliers):
+    return handle_outliers.run(df, dts, outliers)
 
 
 def handle_missing_vals(df, datatypes, missing_vals, names):
@@ -64,12 +64,13 @@ if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
     data = pd.read_csv('datasets\gbc_data\winemag-data-130k-v2.csv')  # diamonds.csv
-    # data = data.iloc[:1000, :]
+    data = data.iloc[:1000, :]
     # Infer data / string type using ptype
     schema, names = inference_ptype(data)
     # names.append('string')
     datatypes = [col.type for _, col in schema.cols.items()]
     missing_vals = [col.get_na_values() for _, col in schema.cols.items()]
+    outlier_vals = [col.get_an_values() for _, col in schema.cols.items()]
     print(schema.show().to_string())
     print(missing_vals)
     print(names)
@@ -80,13 +81,23 @@ if __name__ == "__main__":
     # Take the columns that were inferred as a string (feature)
     # string_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] in names]]
     unique_string_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] in names]]
-    stringtypes = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] in names]
     string_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] == 'string']]
     other_cols = data.iloc[:, [i for i in range(len(datatypes)) if datatypes[i] != 'string' and datatypes[i] not in names]]
 
+    # Make a list of string types for each column
+    unique_string_dts = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] in names]
+    string_dts = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] == 'string']
+
+    # Make a list of outlier values for each column
+    unique_string_out = [outlier_vals[i] for i in range(len(datatypes)) if datatypes[i] in names]
+    string_out = [outlier_vals[i] for i in range(len(datatypes)) if datatypes[i] == 'string']
+
+    # Handle typos in string columns
+    unique_string_cols = handle_outlier_vals(unique_string_cols, unique_string_dts, unique_string_out)
+    string_cols = handle_outlier_vals(string_cols, string_dts, string_out)
+
     # Process unique strings etc
-    # TODO: return whether columns need to be encoded + which encoding they need
-    unique_string_cols, require_encoding = apply_process_unique(unique_string_cols, stringtypes)
+    unique_string_cols, require_encoding = apply_process_unique(unique_string_cols, unique_string_dts)
     print('wassup', unique_string_cols)
 
     # If cannot infer strings using given PFSMs, infer nominal / ordinal
