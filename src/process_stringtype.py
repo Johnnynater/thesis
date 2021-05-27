@@ -176,25 +176,25 @@ def process_month(df):
 
     # Mapping from months to numerical / encoded values
     month_to_int = {
-        'jan': ['01', '000000000001'],
-        'feb': ['02', '000000000010'],
-        'mar': ['03', '000000000100'],
-        'apr': ['04', '000000001000'],
-        'may': ['05', '000000010000'],
-        'jun': ['06', '000000100000'],
-        'jul': ['07', '000001000000'],
-        'aug': ['08', '000010000000'],
-        'sep': ['09', '000100000000'],
-        'oct': ['10', '001000000000'],
-        'nov': ['11', '010000000000'],
-        'dec': ['12', '100000000000']
+        'jan': ['01', 1, 31],   # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        'feb': ['02', 2, 28],   # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+        'mar': ['03', 3, 31],   # [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+        'apr': ['04', 4, 30],   # [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+        'may': ['05', 5, 31],   # [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+        'jun': ['06', 6, 30],   # [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+        'jul': ['07', 7, 31],   # [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+        'aug': ['08', 8, 31],   # [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+        'sep': ['09', 9, 30],   # [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+        'oct': ['10', 10, 31],  # [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        'nov': ['11', 11, 30],  # [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        'dec': ['12', 12, 31]   # [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     }
 
     for i in range(len(months)):
         # Set the dd/mmm/yy variables and split the data based on characters in each value
         dd, mmm, yy = '', '', ''
         split_vals = re.split('[,.\-_ ]', months[i])
-
+        split_vals = list(filter(lambda a: a != "", split_vals))
         if len(split_vals) == 1:
             # Having only one value in split_vals implies we are only dealing with months
             # (because of how the pfsm works).
@@ -212,19 +212,21 @@ def process_month(df):
         else:
             # Having >2 values in split_vals means that we are dealing with day + month + year
             for val in split_vals:
-                print(val)
+                if not val.isdigit():
+                    split_vals.remove(val)
+                    mmm = val[:3]
+                    break
+
+            for val in split_vals:
                 if val[0] == '\'':
                     yy = val[1:]
-                elif val.isdigit():
+                else:
                     if len(val) == 4:
                         yy = val[2:]
-                    # TODO: improve this int(val) > 28 constraint
-                    elif int(val) > 28 or dd != '':
+                    elif int(val) > month_to_int[mmm.lower()][2] or dd != '':
                         yy = val
                     else:
                         dd = val
-                else:
-                    mmm = val[:3]
             changes[months[i]] = int(yy + month_to_int[mmm.lower()][0] + dd)
 
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
@@ -240,6 +242,8 @@ def process_numerical(df):
     """
     nums = list(df.values.flatten())
     processed_nums = []
+    num_range = True
+    max_len = 0
 
     for i in range(len(nums)):
         if re.fullmatch('[0-9]+ ?[-:_/(to)] ?[0-9]+', nums[i]):
@@ -247,9 +251,21 @@ def process_numerical(df):
             digits = np.mean([int(s) for s in re.split(' ?[-:_/(to)] ?', nums[i]) if s.isdigit()])
             processed_nums.append([nums[i], digits])
         else:
-            # only take the relevant numbers
+            num_range = False
+            # Only take the relevant numbers
             digits = int(''.join([s for s in nums[i] if s.isdigit()]))
+
+            # Calculate the max length of all entries (or highest absolute value)
+            if len(str(abs(digits))) > max_len:
+                max_len = len(str(abs(digits)))
+
             processed_nums.append([nums[i], digits])
+
+    # Make all numbers equal length
+    if not num_range:
+        for i in range(len(processed_nums)):
+            length_diff = abs(len(str(processed_nums[i][1])) - max_len)
+            processed_nums[i][1] = processed_nums[i][1] * 10**length_diff
 
     # Sort the data based on the processed numbers
     processed_nums.sort(key=lambda x: x[1])

@@ -63,8 +63,8 @@ def apply_encoding(df, results):
 if __name__ == "__main__":
     # Load in the dataset
     # TODO: when we create a callable method we will probably require it to have a data param, so this won't be needed
-    data = pd.read_csv('datasets\gbc_data\winemag-data-130k-v2.csv')  # diamonds.csv
-    data = data.iloc[:1000, :]
+    data = pd.read_csv('datasets\gbc_data\diamonds.csv')  # winemag-data-130k-v2.csv
+    #data = data.iloc[:1000, :]
     # Infer data / string type using ptype
     schema, names = inference_ptype(data)
     # names.append('string')

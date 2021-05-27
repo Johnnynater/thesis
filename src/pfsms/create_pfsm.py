@@ -47,7 +47,8 @@ class Filepath(Machine):
     def __init__(self):
         super().__init__()
         self.STOP_P = 1e-4
-        self.pfsm_from_fsm(r'([a-zA-Z]:)?(\\|/)?(((\\|/)+[^/:*?"<>|]+[\w\-\s])+|([\w\-\s]+\.\w+))')
+        # ([a-zA-Z]:)?(\\|\/)?(((\\|\/)?[^\/\:*?"<>|]+[\w\-_\s])+|([\w\-_\s]+\.\w+))
+        self.pfsm_from_fsm(r'((.+)?/([^/]+))|((.+)/([^/]+))|(\w+.\w{3})')
         self.create_T_new()
         self.copy_to_z()
         # print(self.T)
@@ -57,9 +58,9 @@ class Month(Machine):
     def __init__(self):
         super().__init__()
         self.STOP_P = 1e-4
-        self.pfsm_from_fsm(r'((\'?\d{2,4})[,.\-_ ]*)?((J|j)an(uary)?|(F|f)eb(ruary)?|(M|m)ar(ch)?|'
+        self.pfsm_from_fsm(r'((\'?\d{1,4})[,.\-_ ]*)?((J|j)an(uary)?|(F|f)eb(ruary)?|(M|m)ar(ch)?|'
                            r'(A|a)pr(il)?|(M|m)ay|(J|j)une?|(J|j)uly?|(A|a)ug(ust)?|(S|s)ep(tember)?|'
-                           r'(O|o)ct(ober)?|((N|n)ov|(D|d)ec)(ember)?)([,.\-_ \']*(\d{2,4}))?')
+                           r'(O|o)ct(ober)?|((N|n)ov|(D|d)ec)(ember)?)([,.\-_ \']*(\d{1,4}))?(, (\d{1,4}))?')
         self.create_T_new()
         self.copy_to_z()
         # print(self.T)
@@ -70,8 +71,8 @@ class Numerical(Machine):
     def __init__(self):
         super().__init__()
         self.STOP_P = 1e-4
-        self.pfsm_from_fsm(r"([0-9]+ ?[\-+_/:;&'(to)] ?[0-9]+)|(([<>$#@%=]+|(less|lower|greater|higher) than"
-                           r"|(under|below|over|above)) ?[0-9]+)|([0-9]+ ?[<>+$%=]+)")
+        self.pfsm_from_fsm(r"([0-9]+ ?[\-+_/:;&'(to)] ?[0-9]+)|(([<>$#@%=]+|((L|l)ess|(L|l)ower|(G|g)reater|(H|h)igher) than"
+                           r"|((U|u)nder|(B|b)elow|(O|o)ver|(A|a)bove))[ \-]?[0-9]+)|([0-9]+ ?[<>+$%=]+)")
         self.create_T_new()
         self.copy_to_z()
         # print(self.T)
@@ -92,7 +93,7 @@ class Sentence(Machine):
     def __init__(self):
         super().__init__()
         self.STOP_P = 1e-4
-        self.pfsm_from_fsm(r'.*\s*([\w&.,;:?!/\-\s\(\){}]+[\s+.,;:?!%—–]+){{6,}}'
+        self.pfsm_from_fsm(r'.*\s*([\w&.,;:?!/\-\s\(\){}]+[\s+.,;:?!%—–]+){{5,}}'
                            r'([\w&.,;:?!/\-\(\){}]*|\s)*.*'.format(spec_char, spec_char))
         self.create_T_new()
         self.copy_to_z()

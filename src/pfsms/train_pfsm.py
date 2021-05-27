@@ -123,7 +123,7 @@ def test_machines(data):
 ptype = Ptype()
 
 # Load required data
-names = ['numerical']#'coordinate', 'day', 'email', 'filepath', 'month', 'numerical', 'ordinal', 'sentence', 'url', 'zipcode']
+names = ['filepath']#'coordinate', 'day', 'email', 'filepath', 'month', 'numerical', 'ordinal', 'sentence', 'url', 'zipcode']
 train, test, columns = load_data(names)
 
 # Create the machines to train/test
@@ -133,7 +133,7 @@ machines = [
     #create_pfsm.Month(), create_pfsm.Numerical(),
     #create_pfsm.OrdinalNumbers(), create_pfsm.Sentence(),
     #create_pfsm.URL(), create_pfsm.Zipcode(),
-create_pfsm.Numerical()
+create_pfsm.Filepath()
 ]
 
 setup_machines(machines, names)
@@ -142,6 +142,11 @@ setup_machines(machines, names)
 # ptype.machines.types.remove('string')
 # del ptype.machines.forType['string']
 
-# train_machines(train, columns, 200)
-test_machines(test)
-save_machines(names)
+train_machines(train, columns, 200)
+# test_machines(test)
+# save_machines(names)
+
+tester = pd.read_csv(r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Tests\data\pfsms\Emails-Filepath.csv')
+tester = tester['MetadataPdfLink'].to_frame()
+schema = ptype.schema_fit(tester)
+print(schema.show().to_string())
