@@ -42,23 +42,35 @@ def process_coordinate(df, orig_df):
 
     for i in range(len(latlong)):
         # Separate values into parts that are easier to work with
-        val = re.split('[NSZEOW]', latlong[i])
-        val = val[1:]
-        val = [val[j].split('.') for j in range(len(val))]
+        val = re.split('([NSZEOW])', latlong[i])
+        val = [re.split(r'[*°ºº\'"´dms\\ ]', val[j]) for j in range(len(val))]
+        val = list(filter(lambda a: a != [''], val))
+        val = [list(filter(lambda a: a != '', item)) for item in val]
 
-        # We have to process coordinates with just north/south or east/west differently
+        if not val[0][0].isdigit():
+            for j in range(len(val)):
+                val[j] = val[j][0].split('.')
+
+        # We have to process coordinates with just north/south or east/west differently, also put any letters upfront
         if len(val) == 2:
+            # Swap entries in case our format is [[digits],[letter]]
+            if val[0][0].isdigit():
+                val[0], val[1] = val[1], val[0]
             val = [val[0] + val[1]]
         elif len(val) == 4:
+            # Swap entries in case our format is [[digits],[letter]]
+            if val[0][0].isdigit():
+                val[0], val[1], val[2], val[3] = val[1], val[0], val[3], val[2]
             val = [val[0] + val[1], val[2] + val[3]]
+            print(val)
 
         # Convert coordinates into latitude/longitude values, inspired by
         # https://en.wikipedia.org/wiki/Geographic_coordinate_conversion
         for j in range(len(val)):
             if val[j][0] in 'SZW':
-                val[j] = -(int(val[j][1]) + int(val[j][2]) / 60 + int(val[j][3]) / 3600)
+                val[j] = -(float(val[j][1]) + float(val[j][2]) / 60 + float(val[j][3]) / 3600)
             else:
-                val[j] = int(val[j][1]) + int(val[j][2]) / 60 + int(val[j][3]) / 3600
+                val[j] = float(val[j][1]) + float(val[j][2]) / 60 + float(val[j][3]) / 3600
 
         if len(val) == 2:
             single_coord = False
@@ -89,6 +101,7 @@ def process_coordinate(df, orig_df):
 
         # Insert obtained latlong into the corresponding dict
         changes[latlong[i]] = val
+        print(changes)
 
     if not single_coord:
         # In case we are dealing with coordinate pairs, add the additional info
@@ -97,7 +110,7 @@ def process_coordinate(df, orig_df):
         orig_df[str(df.columns[0]) + '_xyz'] = orig_df[df.columns[0]].map(changes_xyz)
 
     # Replace the original values for the encoded ones
-    orig_df = orig_df.replace({df.columns[0]: {df.columns[0]: changes}})
+    orig_df[df.columns[0]] = orig_df[df.columns[0]].map(changes)
 
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     if single_coord:
@@ -335,7 +348,10 @@ def process_sentence(df):
         # Using straight-up nltk word tokenizer
         tokenized = nltk.word_tokenize(sent)
         nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if pos == 'NN']
-        changes[sent] = " ".join(nouns)
+        if nouns:
+            changes[sent] = " ".join(nouns)
+        else:
+            changes[sent] = sent
 
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return changes, 1
@@ -411,6 +427,8 @@ def run(df, stringtype):
             return result, encode
         else:
             result, encode = eval('process_{}(df_unique)'.format(stringtype))
-        return df.replace({df.columns[0]: result}), encode
+        return df.replace(result), encode
 
-# data = pd.DataFrame(['<100', 'over 600', 'over 600', '100-300', '300-600'])
+data = pd.DataFrame([r'52º 22\' 12.777" N 4º 53\' 42.604" E', 'N52.22.12E4.53.43'])
+print(run(data, 'coordinate')[0].to_string())
+
