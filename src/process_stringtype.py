@@ -429,6 +429,6 @@ def run(df, stringtype):
             result, encode = eval('process_{}(df_unique)'.format(stringtype))
         return df.replace(result), encode
 
-data = pd.DataFrame([r'52º 22\' 12.777" N 4º 53\' 42.604" E', 'N52.22.12E4.53.43'])
-print(run(data, 'coordinate')[0].to_string())
 
+# data = pd.DataFrame([r'52º 22\' 12.777" N 4º 53\' 42.604" E', 'N52.22.12E4.53.43'])
+# print(run(data, 'coordinate')[0].to_string())
