@@ -41,6 +41,7 @@ def apply_process_unique(df, stringtypes):
     require_encoding = []
     for col, stringtype in zip(df, stringtypes):
         result, encode = process_stringtype.run(df[col].to_frame(), stringtype)
+        # TODO: check if df.reset_index(drop=True, inplace=True) is necessary
         processed_df = pd.concat([processed_df, result], axis=1)
 
         if type(encode) == list:
