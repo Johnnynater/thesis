@@ -7,51 +7,54 @@ from nltk.corpus import wordnet as wn
 # from nltk.stem.wordnet import WordNetLemmatizer
 
 
-def get_word_variations(words):
+def get_word_variations(word):
     variations = {
         'antonyms': set(),
-        'superlatives': set()
+        'superlatives': set(),
+        # 'large quantifiers': set(),
+        # 'small quantifiers': set()
     }
     # Make sure to separate words if there is more than one
-    words = re.split('[ \-_]', words)
+    # words = [' '.join(re.split('[ \-_]', word)) for word in words]
+    # print(words)
 
-    for word in words:
+    # for word in words:
         # Retrieve antonyms
-        for syn in wn.synsets(word):
-            for lemma in syn.lemmas():
-                if lemma.antonyms():
-                    variations['antonyms'].add(lemma.antonyms()[0].name())
+    for syn in wn.synsets(word):
+        for lemma in syn.lemmas():
+            if lemma.antonyms():
+                variations['antonyms'].add(lemma.antonyms()[0].name())
 
-        # Retrieve or generate superlatives
-        for wordset in superlatives:
-            if word in wordset[0]:
-                variations['superlatives'].add(wordset[1])
-                variations['superlatives'].add(wordset[2])
-            elif word in wordset[1]:
-                variations['superlatives'].add(wordset[0])
-                variations['superlatives'].add(wordset[2])
-            elif word in wordset[2]:
-                variations['superlatives'].add(wordset[0])
-                variations['superlatives'].add(wordset[1])
-            elif word not in wordset:
-                # Disclaimer: this will return both correct words and typo words, but this is not a problem.
-                if word[-1] == 'e':
-                    variations['superlatives'].add(word + 'r')
-                    variations['superlatives'].add(word + 'st')
-                elif word[-1] == 'y':
-                    variations['superlatives'].add(word[:-1] + 'ier')
-                    variations['superlatives'].add(word[:-1] + 'iest')
-                else:
-                    variations['superlatives'].add(word + 'er')
-                    variations['superlatives'].add(word + 'est')
-                    variations['superlatives'].add(word + word[-1] + 'er')
-                    variations['superlatives'].add(word + word[-1] + 'est')
-                variations['superlatives'].add('more ' + word)
-                variations['superlatives'].add('most ' + word)
+    # Retrieve or generate superlatives
+    for wordset in superlatives:
+        if word in wordset:
+            for item in wordset:
+                if item != word:
+                    variations['superlatives'].add(item)
+        else:
+            # Disclaimer: this will return both correct words and typo words, but this is not a problem.
+            if word[-1] == 'e':
+                variations['superlatives'].add(word + 'r')
+                variations['superlatives'].add(word + 'st')
+            elif word[-1] == 'y':
+                variations['superlatives'].add(word[:-1] + 'ier')
+                variations['superlatives'].add(word[:-1] + 'iest')
+            else:
+                variations['superlatives'].add(word + 'er')
+                variations['superlatives'].add(word + 'est')
+                variations['superlatives'].add(word + word[-1] + 'er')
+                variations['superlatives'].add(word + word[-1] + 'est')
+            variations['superlatives'].add('more ' + word)
+            variations['superlatives'].add('most ' + word)
+    # # Generate quantifiers
+    # for quant in small_quantifiers:
+    #     variations['small quantifiers'].add(quant + ' ' + word)
+    # for quant in large_quantifiers:
+    #     variations['large quantifiers'].add(quant + ' ' + word)
     return variations
 
 
-def determine_order(values):
+def determine_order_flair(values):
     """ Determine the word order based on flair's LSTM.
 
     :param values: a pandas DataFrame consisting of the unique values of the column.
@@ -75,6 +78,48 @@ def determine_order(values):
     return results
 
 
+def determine_order_heur(values):
+    order, ant_order = [], []
+    ant = ''
+    values_clean = [' '.join(re.split('[ \-_]', val)) for val in values]
+    val_mapping = {x: y for x, y in zip(values_clean, values)}
+    for val in values_clean:
+        variations = get_word_variations(val)
+        print(variations)
+        order.append(val)
+        values_clean.remove(val)
+        for antonym in variations['antonyms']:
+            if antonym in values_clean:
+                ant = antonym
+                ant_order.append(antonym)
+                values_clean.remove(antonym)
+        for superlative in variations['superlatives']:
+            if superlative in values_clean:
+                order.append(superlative)
+                values_clean.remove(superlative)
+        for quant in small_quantifiers:
+            quant_val = '{} {}'.format(quant, val)
+            if quant_val in values_clean:
+                order.append(quant_val)
+                values_clean.remove(quant_val)
+            quant_ant = '{} {}'.format(quant, ant)
+            if quant_ant in values_clean:
+                ant_order.insert(0, quant_ant)
+                values_clean.remove(quant_ant)
+        for quant in large_quantifiers:
+            quant_val = '{} {}'.format(quant, val)
+            if quant_val in values_clean:
+                order.insert(0, quant_val)
+                values_clean.remove(quant_val)
+            quant_ant = '{} {}'.format(quant, ant)
+            if quant_ant in values_clean:
+                ant_order.append(quant_ant)
+                values_clean.remove(quant_ant)
+    ant_order.extend(order)
+    final_order = [val_mapping[x] for x in ant_order]
+    return final_order
+
+
 def run(column, encode_type):
     """ Run the heuristics on string encoding.
 
@@ -86,12 +131,14 @@ def run(column, encode_type):
         # Ordinal encoding required. Determine the order and encode accordingly
         unique_entries = [item for item, _ in column.value_counts().iteritems()]
         # TODO: consider LSTM/heuristics hybrid
-        order = determine_order(unique_entries)
-        enc = OrdinalEncoder(categories=[order], handle_unknown='use_encoded_value', unknown_value=np.nan)
+        order = determine_order_flair(unique_entries)
+        enc = OrdinalEncoder(categories=[order])
     else:
         if column.value_counts().count() < 30:
             # Data has low cardinality. Encode using SimilarityEncoder
             enc = SimilarityEncoder()
+        elif column.value_counts().count() < 100:
+            enc = MinHashEncoder()
         else:
             # Data has high cardinality. Encode using GapEncoder
             enc = GapEncoder()
@@ -110,10 +157,12 @@ large_quantifiers = [
     'numerous',
     'a large number of',
     'most',
-    'enough'
+    'enough',
+    'very',
+    'extremely'
 ]
 
-little_quantifiers = [
+small_quantifiers = [
     'not much',
     'not many',
     'few',
@@ -131,8 +180,8 @@ superlatives = [
     ['less', 'lesser', 'least'],
     ['well', 'better', 'best']
 ]
-# import pandas as pd
-# # print(determine_order(['better', 'best', 'good']))
+import pandas as pd
+# print(determine_order_heur(['very good', 'good', 'bad', 'very bad']))
 # column = pd.Series(['<100', 'over 600', 'over 600', '100-300', '300-600'])
 # cool1 = [item for item, _ in column.value_counts().iteritems()]
 # cool2 = list(column.values.flatten())

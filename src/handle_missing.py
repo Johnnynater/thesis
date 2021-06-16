@@ -55,7 +55,9 @@ def mcar_test(df):
 
 
 def calc_ratio_missing(df):
-    return len(df[df.isnull().any(axis=1)]) / (df.shape[0] * df.shape[1])
+    # TODO: this is wrong, e.g. if a 5x101 column is missing 1 value per row, the entire df is removed...
+    print(len(df[df.isnull().any(axis=1)]), df.shape[0])
+    return len(df[df.isnull().any(axis=1)]) / df.shape[0]
 
 
 def delete_rows(df):

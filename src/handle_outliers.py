@@ -38,7 +38,7 @@ def compute_most_similar(unique_vals, ngram_vals):
                 ratio = 0
 
             # TODO: change this threshold?
-            if ratio >= 0.5 and ratio > best_ratio:
+            if ratio >= 0.6 and ratio > best_ratio:
                 best_ratio = ratio
                 best_pair = [unique_vals[i], unique_vals[j]]
         if best_pair:

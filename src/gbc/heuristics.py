@@ -21,11 +21,11 @@ import csv
 # TODO: come up with more names / keywords
 nominal_colnames = [
     'address', 'age', 'area', 'category', 'city', 'code', 'color', 'colour', 'country', 'gender', 'group',
-    'location', 'mode', 'name', 'nationality', 'place', 'post', 'race', 'role', 'sex', 'type', 'year', 'zip'
+    'location', 'mode', 'name', 'nationality', 'place', 'post', 'race', 'role', 'sex', 'type', 'zip'
 ]
 
 ordinal_colnames = [
-    'stage', 'phase', 'rating', 'level', 'size', 'rank', 'order', 'grade', 'opinion', 'scale', 'degree'
+    'stage', 'phase', 'rating', 'level', 'size', 'rank', 'order', 'grade', 'opinion', 'scale', 'degree', 'year'
 ]
 
 # nominal_keywords = []
@@ -35,7 +35,6 @@ ordinal_keywords = [
     'probably', 'hardly', 'scarcely', 'minutely', 'vaguely', 'barely', 'slightly', 'moderately', 'pretty',
     'strongly', 'very', 'intensely', 'immensely', 'extremely', 'absolutely', 'infinitely', 'unlimitedly',
     'completely', 'ultimately', 'much', 'many', 'a lot', 'plenty', 'numerous',
-
     # Nouns
     'agree', 'neutral', 'low', 'medium', 'high', 'good', 'better', 'best', 'bad', 'worse', 'worst',
     'much', 'many', 'more', 'most', 'far', 'less', 'lesser', 'least', 'well', 'better', 'best'
@@ -80,7 +79,7 @@ def ratio_check(nr_unique, nr_total):
 
 
 def distance_check(df):
-    """ Calculate the mean variance of the word embedding of all entries.
+    """ Calculate the mean variance of the distance between word embeddings of all entries.
 
     :param df: a pandas DataFrame consisting of unique String entries.
     :return: a Float representing the mean variance of all embedded String entries.
@@ -164,6 +163,7 @@ def comstring_check(df):
     :param df: a pandas DataFrame consisting of unique String entries.
     :return: 1 if a substring was found, 0 otherwise.
     """
+    # TODO: remove redundant stuff (e.g., substrings list is not used)
     labels = [x[0] for x in df.index.values.tolist()]
     substrings = []
 
@@ -203,7 +203,7 @@ def comstring_check(df):
 
 
 def run(df):
-    """ Run all the heuristics and save the result.
+    """ Run all the heuristics and return the resulting sample.
 
     :param df: a pandas DataFrame.
     :return: a List of Floats/Integers containing results from each heuristic.

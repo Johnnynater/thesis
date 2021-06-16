@@ -1,6 +1,7 @@
 import math
 import nltk
 import re
+import os
 import numpy as np
 import pandas as pd
 from functools import partial
@@ -19,6 +20,24 @@ def calculate_xyz(ll):
     y = math.sin(math.pi / 2 - ll[0]) * math.sin(ll[1])
     z = math.cos(math.pi / 2 - ll[0])
     return [x, y, z]
+
+
+def remove_longest_fix(values, suf=False):
+    """ Remove the longest common suffix or prefix of a List of Strings by abusing os.path.commonprefix().
+
+    :param values: a List of Strings.
+    :param suf: a Boolean representing whether the suffix needs to be removed, default=False.
+    :return: a List of Strings without the longest common prefix / suffix.
+    """
+    if suf:
+        values = [x[::-1] for x in values]
+
+    com_fix = os.path.commonprefix(values)
+    new_values = [x[len(com_fix):] for x in values]
+
+    if suf:
+        new_values = [x[::-1] for x in new_values]
+    return new_values
 
 
 def process_coordinate(df, orig_df):
@@ -62,11 +81,11 @@ def process_coordinate(df, orig_df):
             if val[0][0].isdigit():
                 val[0], val[1], val[2], val[3] = val[1], val[0], val[3], val[2]
             val = [val[0] + val[1], val[2] + val[3]]
-            print(val)
 
         # Convert coordinates into latitude/longitude values, inspired by
         # https://en.wikipedia.org/wiki/Geographic_coordinate_conversion
         for j in range(len(val)):
+            val[j][3] = val[j][3].replace(',', '.')
             if val[j][0] in 'SZW':
                 val[j] = -(float(val[j][1]) + float(val[j][2]) / 60 + float(val[j][3]) / 3600)
             else:
@@ -101,7 +120,6 @@ def process_coordinate(df, orig_df):
 
         # Insert obtained latlong into the corresponding dict
         changes[latlong[i]] = val
-        print(changes)
 
     if not single_coord:
         # In case we are dealing with coordinate pairs, add the additional info
@@ -126,6 +144,7 @@ def process_day(df):
     :return: a pandas DataFrame consisting of Strings that represent abbreviated days;
              an Integer indicating the encoding type required.
     """
+    # TODO: what if ordinal encoding is better?
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return df[df.columns[0]].str[:2], 1
 
@@ -138,12 +157,17 @@ def process_email(df):
              an Integer representing the encoding type required.
     """
     emails = list(df.values.flatten())
+
+    # Remove common suffix
+    emails = remove_longest_fix(emails, True)
+
     changes = {}
 
     for i in range(len(emails)):
         # Split between name and domain of e-mail + remove top-level domains
         val = emails[i].split("@", 1)
-        val[1] = val[1].split(".", 1)[0]
+        if len(val) > 1:
+            val[1] = val[1].split(".", 1)[0]
         val = " ".join(val)
         changes[emails[i]] = val
 
@@ -160,18 +184,20 @@ def process_filepath_url(df, type):
              an Integer representing the encoding type required.
     """
     data = list(df.values.flatten())
-    changes = {}
 
+    # Remove common prefix / suffix
+    fixless_data = remove_longest_fix(remove_longest_fix(data), True)
+
+    changes = {}
     for i in range(len(data)):
-        val = data[i]
+        val = fixless_data[i]
         if type == 'url':
-            if '://' in data[i]:
+            if '://' in fixless_data[i]:
                 val = val.split("://", 1)[1]
         val = re.split("[^a-zA-Z0-9]", val)
         val = list(filter(lambda a: a != "", val))
         val = " ".join(val)
         changes[data[i]] = val
-
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return changes, 1
 
@@ -226,20 +252,31 @@ def process_month(df):
             # Having >2 values in split_vals means that we are dealing with day + month + year
             for val in split_vals:
                 if not val.isdigit():
-                    split_vals.remove(val)
-                    mmm = val[:3]
-                    break
+                    if val[0] == '\'':
+                        yy = val # [1:]
+                    else:
+                        mmm = val # [:3]
+            if yy:
+                split_vals.remove(yy)
+                yy = yy[1:]
+            if mmm:
+                split_vals.remove(mmm)
+                mmm = mmm[:3]
 
             for val in split_vals:
-                if val[0] == '\'':
-                    yy = val[1:]
+                if not val.isdigit():
+                    if val[0] == '\'':
+                        yy = val[1:]
+                    else:
+                        mmm = val[:3]
                 else:
                     if len(val) == 4:
                         yy = val[2:]
-                    elif int(val) > month_to_int[mmm.lower()][2] or dd != '':
+                    elif int(val) > month_to_int[mmm.lower()][2] or dd:
                         yy = val
                     else:
-                        dd = val
+                        dd = val if len(val) == 2 else '0' + str(val)
+            # print(yy, month_to_int[mmm.lower()][0], dd)
             changes[months[i]] = int(yy + month_to_int[mmm.lower()][0] + dd)
 
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
@@ -255,30 +292,40 @@ def process_numerical(df):
     """
     nums = list(df.values.flatten())
     processed_nums = []
-    num_range = True
+    num_range = False
     max_len = 0
 
     for i in range(len(nums)):
         if re.fullmatch('[0-9]+ ?[-:_/(to)] ?[0-9]+', nums[i]):
             # Take the mean of the range
-            digits = np.mean([int(s) for s in re.split(' ?[-:_/(to)] ?', nums[i]) if s.isdigit()])
-            processed_nums.append([nums[i], digits])
-        else:
-            num_range = False
-            # Only take the relevant numbers
+            num_range = True
+            digits = int(np.mean([int(s) for s in re.split(' ?[-:_/(to)] ?', nums[i]) if s.isdigit()]))
+        elif re.fullmatch(
+                r"(([<>$#@%=]+|(([Ll])ess|([Ll])ower|([Gg])reater|([Hh])igher) than"
+                r"|(([Uu])nder|([Bb])elow|([Oo])ver|([Aa])bove))[ \-]?[0-9]+)|([0-9]+ ?[<>+$%=]+)",
+                nums[i]
+        ):
+            # Only take the relevant numbers, but set num_range to true
+            num_range = True
             digits = int(''.join([s for s in nums[i] if s.isdigit()]))
+        else:
+            # Only take the relevant numbers
+            digits = re.split(r" ?[+:;&'] ?", nums[i])
+            for d in digits:
+                # Calculate the max length of all entries (or highest absolute value)
+                if len(d) > max_len:
+                    max_len = len(d)
 
-            # Calculate the max length of all entries (or highest absolute value)
-            if len(str(abs(digits))) > max_len:
-                max_len = len(str(abs(digits)))
-
-            processed_nums.append([nums[i], digits])
+        processed_nums.append([nums[i], digits])
 
     # Make all numbers equal length
     if not num_range:
         for i in range(len(processed_nums)):
-            length_diff = abs(len(str(processed_nums[i][1])) - max_len)
-            processed_nums[i][1] = processed_nums[i][1] * 10**length_diff
+            concat_value = processed_nums[i][1][0]
+            for j in range(1, len(processed_nums[i][1])):
+                length_diff = abs(len(processed_nums[i][1][j]) - max_len)
+                concat_value += ('0' * length_diff) + processed_nums[i][1][j]
+            processed_nums[i][1] = int(concat_value)
 
     # Sort the data based on the processed numbers
     processed_nums.sort(key=lambda x: x[1])
@@ -375,30 +422,36 @@ def process_zipcode(df, orig_df):
 
     for i in range(len(zipcodes)):
         # Remove any spaces (this is basically all the pre-processing we need for just zipcodes)
-        val = zipcodes[i].replace(' ', '')
-        zip_info = geolocator.geocode(val)
-        latlong = [zip_info.latitude, zip_info.longitude]
+        # val = zipcodes[i].replace(' ', '')
+        zip_info = geolocator.geocode(zipcodes[i])
+        if zip_info:
+            latlong = [zip_info.latitude, zip_info.longitude]
 
-        # Convert latitude/longitude to xyz
-        xyz = calculate_xyz([zip_info.latitude, zip_info.longitude])
+            # Convert latitude/longitude to xyz
+            xyz = calculate_xyz([zip_info.latitude, zip_info.longitude])
 
-        # Gather more information using geopy
-        latlong_info = reverse('{}, {}'.format(zip_info.latitude, zip_info.longitude)).raw
-        country = latlong_info['address']['country_code']
-        if 'city' in latlong_info['address']:
-            city = latlong_info['address']['city']
+            # Gather more information using geopy
+            latlong_info = reverse('{}, {}'.format(zip_info.latitude, zip_info.longitude)).raw
+            country = latlong_info['address']['country_code']
+            if 'city' in latlong_info['address']:
+                city = latlong_info['address']['city']
+            else:
+                city = 'unknown'
         else:
             city = 'unknown'
+            country = 'unknown'
+            latlong = [0, 0]
+            xyz = [0, 0, 0]
 
         # Insert the obtained values in the corresponding dicts
         changes_city[zipcodes[i]] = city
         changes_country[zipcodes[i]] = country
         changes_latlong[zipcodes[i]] = latlong
         changes_xyz[zipcodes[i]] = xyz
-        changes[zipcodes[i]] = val
+        # changes[zipcodes[i]] = val
 
     # Map the updated + new values to the corresponding values in the original DataFrame
-    orig_df = orig_df.replace({df.columns[0]: changes})
+    # orig_df = orig_df.replace({df.columns[0]: changes})
     orig_df[str(df.columns[0]) + '_city'] = orig_df[df.columns[0]].map(changes_city)
     orig_df[str(df.columns[0]) + '_country'] = orig_df[df.columns[0]].map(changes_country)
     orig_df[str(df.columns[0]) + '_latlong'] = orig_df[df.columns[0]].map(changes_latlong)
@@ -431,4 +484,8 @@ def run(df, stringtype):
 
 # test
 # data = pd.DataFrame([r'52º 22\' 12.777" N 4º 53\' 42.604" E', 'N52.22.12E4.53.43'])
-# print(run(data, 'coordinate')[0].to_string())
+# data = pd.DataFrame([r"80+15", r"80+009"])
+# print(run(data, 'numerical')[0].to_string())
+
+# data = pd.read_csv(r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Tests\data\pfsms\Data_Uk-Email-URL-Zip.csv')
+# print(run(data['postal'].to_frame().iloc[:100000, :].dropna(), 'zipcode')[0].to_string())
