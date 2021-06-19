@@ -148,10 +148,12 @@ def run(df, datatypes, names):
     # Test if the missing values in the DataFrame are MCAR
     if mcar_test(df) >= 0.05:
         # Missing data is probably MCAR, we can impute with mean/mode
+        print('>> Missing values imputed using mean and mode imputation')
         df = impute_mcar(df, datatypes, names)
     else:
         # Missing data is probably MAR/MNAR. Since we cannot test for MNAR, We choose an imputation strategy that
         # works for both MAR/MNAR, namely a Multivariate imputer (IterativeImputer) from sklearn
+        print('>> Missing values imputed using IterativeImputer')
         df = impute_mar_mnar(df)
 
     # Return the data with decoded string columns

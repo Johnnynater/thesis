@@ -126,6 +126,7 @@ def run(df, datatypes, outliers):
                         tup = sort_tuples(unique_freq, pair)
                         if compute_ratio(tup):
                             # Replace outlying value with the most similar value
+                            print('>> Outlier found. Outlier "{}" replaced by "{}".'.format(tup[0][0], tup[1][0]))
                             df[col] = df[col].replace(tup[0][0], tup[1][0])
 
         elif dt != 'sentence':
@@ -139,5 +140,6 @@ def run(df, datatypes, outliers):
                     tup = sort_tuples(unique_freq, pair)
                     if compute_ratio(tup):
                         # Replace outlying value with the most similar value
+                        print('>> Outlier found. Outlier {} replaced by {}.'.format(tup[0][0], tup[1][0]))
                         df[col] = df[col].replace(tup[0][0], tup[1][0])
     return df

@@ -120,11 +120,12 @@ def determine_order_heur(values):
     return final_order
 
 
-def run(column, encode_type):
+def run(df, column, encode_type, dense):
     """ Run the heuristics on string encoding.
 
     :param column: a pandas DataFrame consisting of the column to be encoded.
     :param encode_type: an Integer indicating whether the column needs ordinal or nominal encoding.
+    :param dense: a Boolean indicating whether the encoded values are fitted in one column or in multiple.
     :return: a Dictionary consisting of the mappings String -> Float/List.
     """
     if encode_type == 0:
@@ -142,9 +143,19 @@ def run(column, encode_type):
         else:
             # Data has high cardinality. Encode using GapEncoder
             enc = GapEncoder()
-    return dict({
-        x: (y[0] if encode_type == 0 else y) for x, y in zip(column, enc.fit_transform(column.to_frame()))
-    })
+
+    if dense or encode_type == 0:
+        return dict({
+            x: (y[0] if encode_type == 0 else y) for x, y in zip(column, enc.fit_transform(column.to_frame()))
+        })
+    else:
+        # Create a column for each dimension and return the resulting DataFrame
+        encoding = enc.fit_transform(np.array(column).reshape((-1, 1)))
+        df = df.drop(columns=column.name)
+        dim_len = len(encoding[0])
+        encoding = pd.DataFrame([encoding[i] for i in range(len(encoding))])
+        encoding = encoding.rename(columns={i: column.name + str(i) for i in range(dim_len)})
+        return pd.concat([df, encoding], axis=1)
 
 
 # List of all types of quantifiers (split between little and large), taken from

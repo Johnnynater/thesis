@@ -265,7 +265,7 @@ def run(df):
     # with open("../out_nominal.csv", "a", newline="") as f:
     #     writer = csv.writer(f)
     #     writer.writerows(results)
-    print(results)
+    # print(results)
     return results
 
 
