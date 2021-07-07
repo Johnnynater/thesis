@@ -1,25 +1,26 @@
 import flair
 import re
 import numpy as np
+import pandas as pd
 from dirty_cat import SimilarityEncoder, MinHashEncoder, GapEncoder
 from sklearn.preprocessing import OrdinalEncoder
 from nltk.corpus import wordnet as wn
+# from category_encoders import TargetEncoder
 # from nltk.stem.wordnet import WordNetLemmatizer
 
 
 def get_word_variations(word):
+    """ Generate various new entries derived from a given word. Variations include antonyms and superlatives.
+
+    :param word: a String representing a word from the List of unique entries for a given column.
+    :return: a Dictionary containing the set of antonyms and superlatives for a given word.
+    """
     variations = {
         'antonyms': set(),
         'superlatives': set(),
-        # 'large quantifiers': set(),
-        # 'small quantifiers': set()
     }
-    # Make sure to separate words if there is more than one
-    # words = [' '.join(re.split('[ \-_]', word)) for word in words]
-    # print(words)
 
-    # for word in words:
-        # Retrieve antonyms
+    # Retrieve antonyms
     for syn in wn.synsets(word):
         for lemma in syn.lemmas():
             if lemma.antonyms():
@@ -46,11 +47,6 @@ def get_word_variations(word):
                 variations['superlatives'].add(word + word[-1] + 'est')
             variations['superlatives'].add('more ' + word)
             variations['superlatives'].add('most ' + word)
-    # # Generate quantifiers
-    # for quant in small_quantifiers:
-    #     variations['small quantifiers'].add(quant + ' ' + word)
-    # for quant in large_quantifiers:
-    #     variations['large quantifiers'].add(quant + ' ' + word)
     return variations
 
 
@@ -65,7 +61,6 @@ def determine_order_flair(values):
     flair_sentiment = flair.models.TextClassifier.load('en-sentiment')
     results = []
     for value in values:
-        # variations = get_word_variations(value)
         s = flair.data.Sentence(value)
         flair_sentiment.predict(s)
         total_sentiment = s.labels
@@ -79,6 +74,11 @@ def determine_order_flair(values):
 
 
 def determine_order_heur(values):
+    """ Determine the order of unique entries in a column heuristically, based on presence of word variations.
+
+    :param values: a List of unique Strings of a column.
+    :return: a List of unique Strings in a specific order determined by the heuristics.
+    """
     order, ant_order = [], []
     ant = ''
     values_clean = [' '.join(re.split('[ \-_]', val)) for val in values]
@@ -120,18 +120,20 @@ def determine_order_heur(values):
     return final_order
 
 
-def run(df, column, encode_type, dense):
+def run(df, y, column, encode_type, dense):
     """ Run the heuristics on string encoding.
 
+    :param df: a pandas DataFrame consisting of the data.
+    :param y: a pandas DataFrame consisting of target values.
     :param column: a pandas DataFrame consisting of the column to be encoded.
     :param encode_type: an Integer indicating whether the column needs ordinal or nominal encoding.
     :param dense: a Boolean indicating whether the encoded values are fitted in one column or in multiple.
     :return: a Dictionary consisting of the mappings String -> Float/List.
     """
+    # TODO: TargetEncoder for non-similar strings.
     if encode_type == 0:
         # Ordinal encoding required. Determine the order and encode accordingly
         unique_entries = [item for item, _ in column.value_counts().iteritems()]
-        # TODO: consider LSTM/heuristics hybrid
         order = determine_order_flair(unique_entries)
         enc = OrdinalEncoder(categories=[order])
     else:
@@ -191,7 +193,8 @@ superlatives = [
     ['less', 'lesser', 'least'],
     ['well', 'better', 'best']
 ]
-import pandas as pd
+
+
 # print(determine_order_heur(['very good', 'good', 'bad', 'very bad']))
 # column = pd.Series(['<100', 'over 600', 'over 600', '100-300', '300-600'])
 # cool1 = [item for item, _ in column.value_counts().iteritems()]

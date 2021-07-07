@@ -40,8 +40,8 @@ def mcar_test(df):
         select_vars = ~dataset_temp.isnull().any()
         pj += np.sum(select_vars)
         select_vars = vars[select_vars]
-        means = dataset_temp[select_vars].mean() - gmean[select_vars]
-        select_cov = gcov.loc[select_vars, select_vars]
+        means = dataset_temp.reindex(select_vars, axis=1).mean() - gmean.reindex(select_vars, axis=1)
+        select_cov = gcov.reindex(index=select_vars, columns=select_vars)
         mj = len(dataset_temp)
         parta = np.dot(means.T, np.linalg.solve(select_cov, np.identity(select_cov.shape[1])))
         d2 += mj * (np.dot(parta, means))
@@ -55,16 +55,31 @@ def mcar_test(df):
 
 
 def calc_ratio_missing(df):
-    # TODO: this is wrong, e.g. if a 5x101 column is missing 1 value per row, the entire df is removed...
-    print(len(df[df.isnull().any(axis=1)]), df.shape[0])
+    """ Calculate the ratio of rows containing missing values vs. the total number of rows.
+
+    :param df: a pandas DataFrame containing missing values.
+    :return: a Float indicating the ratio of rows containing missing values vs. total nr. of rows.
+    """
     return len(df[df.isnull().any(axis=1)]) / df.shape[0]
 
 
 def delete_rows(df):
+    """ Delete rows containing missing values.
+
+    :param df: a pandas DataFrame containing missing values.
+    :return: a pandas DataFrame without missing values.
+    """
     return df.dropna()
 
 
 def impute_mcar(df, datatypes, names):
+    """ Impute missing values that are MCAR using mean/mode imputation.
+
+    :param df: a pandas DataFrame consisting of Floats/Integers and missing values.
+    :param datatypes: a List containing the string feature types that can be inferred specifically.
+    :param names: a List containing the data type / string feature type of each column.
+    :return: a pandas DataFrame whose missing values are imputed.
+    """
     for col, val in zip(df, datatypes):
         if val in names:
             imp_freq = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
@@ -76,7 +91,7 @@ def impute_mcar(df, datatypes, names):
 
 
 def impute_mar_mnar(df):
-    """ Impute the data using sci-kit learn's IterativeImputer.
+    """ Impute the data using scikit-learn's IterativeImputer.
 
     :param df: a pandas DataFrame consisting of Floats/Integers and missing values.
     :return: a pandas DataFrame whose missing values are imputed.
@@ -94,17 +109,17 @@ def encode_strings(df, datatypes, names):
     :param names: a List of Strings representing all string-type names that can be inferred by ptype.
     :return: a pandas DataFrame consisting of encoded Strings.
     """
-    encoded_vals = []
+    encoded_vals = {}
     for col, val in zip(df, datatypes):
-        if val in names:
-            replacement = df[col].dropna().unique().reshape(-1, 1)
+        if val in names or df[col].dtype not in ['int64', 'float64']:
+            replacement = df[col].dropna().map(lambda x: str(x) if type(x) != str else x).unique().reshape(-1, 1)
             enc = OrdinalEncoder()
             enc.fit(replacement)
             encoding = enc.categories_
             encoding_dict = dict(zip((encoding[0]), range(len(encoding[0]))))
             df[col] = df[col].map(encoding_dict)
             reverse_encoding_dict = dict(zip(range(len(encoding[0])), (encoding[0])))
-            encoded_vals.append(reverse_encoding_dict)
+            encoded_vals[col] = reverse_encoding_dict
     return df, encoded_vals
 
 
@@ -117,14 +132,15 @@ def decode_strings(df, datatypes, names, encoded_vals):
     :param encoded_vals: a Dictionary representing a mapping from encoded value to original string (Float/Int -> String)
     :return: a pandas DataFrame consisting of the original String entries.
     """
-    i = 0
     for col, val in zip(df, datatypes):
-        if val in names:
+        if val in names or df[col].dtype not in ['int64', 'float64']:
             for item in df[col].unique():
-                if item not in encoded_vals[i]:
-                    encoded_vals[i][item] = 'placeholder category {}'.format(int(abs(item)))
-            df[col] = df[col].map(encoded_vals[i])
-            i += 1
+                if item not in encoded_vals[col]:
+                    # Associate item with the closest key that is in the dict
+                    encoded_vals[col][item] = encoded_vals[col][
+                        min(encoded_vals[col].keys(), key=lambda k: abs(k-item))
+                    ]
+            df[col] = df[col].map(encoded_vals[col])
     return df
 
 
@@ -139,24 +155,32 @@ def run(df, datatypes, names):
     if calc_ratio_missing(df) < 0.05:
         # Since less than 5% of the data is missing, removing the missing values will have no significant impact
         # on the performance
+        print('>> Removed rows containing missing values')
         return delete_rows(df)
 
     # Encode string data so it can be imputed
     names.append('string')
+    names.append('date-eu')
     df, encoded_vals = encode_strings(df, datatypes, names)
 
-    # Test if the missing values in the DataFrame are MCAR
-    if mcar_test(df) >= 0.05:
-        # Missing data is probably MCAR, we can impute with mean/mode
-        print('>> Missing values imputed using mean and mode imputation')
-        df = impute_mcar(df, datatypes, names)
-    else:
-        # Missing data is probably MAR/MNAR. Since we cannot test for MNAR, We choose an imputation strategy that
-        # works for both MAR/MNAR, namely a Multivariate imputer (IterativeImputer) from sklearn
-        print('>> Missing values imputed using IterativeImputer')
+    try:
+        # Test if the missing values in the DataFrame are MCAR
+        if mcar_test(df) >= 0.05:
+            # Missing data is probably MCAR, we can impute with mean/mode
+            df = impute_mcar(df, datatypes, names)
+            print('>> Missing values imputed using mean and mode imputation')
+        else:
+            # Missing data is probably MAR/MNAR. Since we cannot test for MNAR, We choose an imputation strategy that
+            # works for both MAR/MNAR, namely a Multivariate imputer (IterativeImputer) from sklearn
+            df = impute_mar_mnar(df)
+            print('>> Missing values imputed using IterativeImputer')
+    except:
+        # Since MCAR test cannot be run on the data, we apply the IterativeImputer.
         df = impute_mar_mnar(df)
+        print('>> Missing values imputed using IterativeImputer')
 
     # Return the data with decoded string columns
     df = decode_strings(df, datatypes, names, encoded_vals)
     names.remove('string')
+    names.remove('date-eu')
     return df

@@ -23,7 +23,6 @@ class Coordinate(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class Day(Machine):
@@ -36,7 +35,6 @@ class Day(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class Email(Machine):
@@ -46,7 +44,6 @@ class Email(Machine):
         self.pfsm_from_fsm(r'([a-zA-Z0-9_.+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+)')
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class Filepath(Machine):
@@ -60,7 +57,6 @@ class Filepath(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class Month(Machine):
@@ -74,7 +70,6 @@ class Month(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 # PFSM to handle integers including special characters, e.g.: 100-500, <10, >10, 100+, $100
@@ -89,7 +84,6 @@ class Numerical(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class OrdinalNumbers(Machine):
@@ -99,7 +93,6 @@ class OrdinalNumbers(Machine):
         self.pfsm_from_fsm(r'[\s\w\-]+(st|nd|rd|th)')
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class Sentence(Machine):
@@ -112,7 +105,6 @@ class Sentence(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 class URL(Machine):
@@ -125,7 +117,6 @@ class URL(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)
 
 
 # Zipcode pfsm. See https://stackoverflow.com/questions/578406/what-is-the-ultimate-postal-code-and-zip-regex
@@ -156,8 +147,8 @@ class Zipcode(Machine):
             r'(BBND 1ZZ)|'
             r'([A-Z]{2}[ ]?\d{4})|'
             # r'(\d{4,5}|\d{3}-\d{4})|'
-            r'([A-Z]\d{4}[A-Z]|(?:[A-Z]{2})?\d{6})|'
-            r'((?:\d{5})?)|'
+            r'([A-Z]\d{4}[A-Z]|(?:[A-Z]{2})\d{6})|'
+            # r'((?:\d{5})?)|'
             # r'((\d{4}([ ]?\d{4})?)?)|'
             r'([A-Z]{3}[ ]?\d{2,4})|'
             # r'((\d{4}-)?\d{3}-\d{3}(-\d{1})?)|'
@@ -178,4 +169,3 @@ class Zipcode(Machine):
         )
         self.create_T_new()
         self.copy_to_z()
-        # print(self.T)

@@ -1,12 +1,9 @@
-from src.unused_methods.infer_stattype import generate_clusters
 import re
 import numpy as np
-import pandas as pd
 import pickle as pkl
 from itertools import zip_longest
-import csv
 
-# My features are:
+# The self-invented features are:
 # - Number of entries                                       (numerical)     (nom/ord)
 # - Number of unique entries                                (numerical)     (nom/ord)
 # - Ratio unique/total                                      (numerical)     (nom/ord)
@@ -17,8 +14,6 @@ import csv
 # - Check if unique entries contain ordinal keywords        (True/False)    (ordinal)
 # - Check if unique values have common substring            (True/False)    (ordinal)
 
-
-# TODO: come up with more names / keywords
 nominal_colnames = [
     'address', 'age', 'area', 'category', 'city', 'code', 'color', 'colour', 'country', 'gender', 'group',
     'location', 'mode', 'name', 'nationality', 'place', 'post', 'race', 'role', 'sex', 'type', 'zip'
@@ -27,8 +22,6 @@ nominal_colnames = [
 ordinal_colnames = [
     'stage', 'phase', 'rating', 'level', 'size', 'rank', 'order', 'grade', 'opinion', 'scale', 'degree', 'year'
 ]
-
-# nominal_keywords = []
 
 ordinal_keywords = [
     # Adjectives
@@ -41,10 +34,10 @@ ordinal_keywords = [
 ]
 
 # Since the file size of the original embeddings is too big, I have to split the dict into two separate dicts
-# embeddings = pkl.load(open(f'datasets/6B.50_glove.pkl', 'rb'))
 fh_emb = pkl.load(open(f'datasets/50_glove_1.pkl', 'rb'))
 sh_emb = pkl.load(open(f'datasets/50_glove_2.pkl', 'rb'))
-embeddings = fh_emb | sh_emb
+
+embeddings = {**fh_emb, **sh_emb}
 
 
 def ratio_check(nr_unique, nr_total):
@@ -55,27 +48,7 @@ def ratio_check(nr_unique, nr_total):
     :param nr_total: an Integer representing the number of entries.
     :return: a Float representing the ratio between unique values and total number of values.
     """
-    # ratio = nr_unique / nr_total
-
-    # print((0.104 - 0.0001 * nr_total), (0.0002 * nr_total + 0.2), nr_total, ratio,
-    #       (ratio < (0.104 - 0.0001 * nr_total)), (ratio < (0.0002 * nr_total + 0.2) and nr_unique in [3, 5, 7]),
-    #       nr_unique)
     return nr_unique / nr_total
-    # if nr_total <= 50:
-    #     return 'Not enough data'
-    # elif nr_unique == 1:
-    #     return 'Single value'
-    # elif nr_unique == 2:
-    #     return 'Binary'
-    # # Ratio scales down or up with the number of entries, depending on which distribution we are evaluating
-    # elif ratio < (0.104 - 0.0001 * nr_total) and nr_unique < 10:
-    #     return 'Ordinal'
-    # elif ratio < (0.0002 * nr_total + 0.2) and nr_unique <= 7:
-    #     return 'Categorical/Ordinal'
-    # elif ratio < (0.0002 * nr_total + 0.2) and nr_unique > 7:
-    #     return 'Categorical'
-    # else:
-    #     return 'Continuous'
 
 
 def distance_check(df):
@@ -113,47 +86,38 @@ def name_check(column_name):
              or not (0).
     """
     column_name = column_name.lower()
-    name_nom, name_ord = 0, 0  # False, False
+    name_nom, name_ord = 0, 0
 
     # Check whether column name is (part of) known nominal / ordinal column names
     for nominal, ordinal in zip_longest(nominal_colnames, ordinal_colnames):
         if nominal and (nominal in column_name or column_name in nominal):
-            name_nom = 1  # True
+            name_nom = 1
             break
         if ordinal and (ordinal in column_name or column_name in ordinal):
-            name_ord = 1  # True
+            name_ord = 1
             break
 
     return name_nom, name_ord
 
 
 def keyword_check(df):
-    """ Check whether entries contain certain keywords associated to data with or without order.
+    """ Check whether entries contain certain keywords associated to ordinal data.
 
     :param df: a pandas DataFrame consisting of unique String entries.
     :return: 1 if a sufficient amount of keywords are found, 0 otherwise.
     """
-    # TODO: maybe don't do it based on percentages, but just whenever we see one keyword
-    # keyword_nom_count, keyword_ord_count = 0, 0
-    # keyword_nom, keyword_ord = False, False
     keyword_ord_count = 0
-    keyword_ord = 0  # False
+    keyword_ord = 0
 
-    # Check for nominal and ordinal keywords
-    # for nominal, ordinal in zip_longest(nominal_keywords, ordinal_keywords):
+    # Check for ordinal keywords
     for ordinal in ordinal_keywords:
         for item, _ in df.iteritems():
-            # if nominal and nominal in item.lower():
-            #     keyword_nom_count += 1
             if ordinal and ordinal in item.lower():
                 keyword_ord_count += 1
     # Make sure this occurs for at least 20% of the data
-    # if keyword_nom_count / len(df) >= 0.2:
-    #     keyword_ord = True
     if keyword_ord_count / len(df) >= 0.2:
-        keyword_ord = 1  # True
+        keyword_ord = 1
 
-    # return keyword_nom, keyword_ord
     return keyword_ord
 
 
@@ -163,9 +127,7 @@ def comstring_check(df):
     :param df: a pandas DataFrame consisting of unique String entries.
     :return: 1 if a substring was found, 0 otherwise.
     """
-    # TODO: remove redundant stuff (e.g., substrings list is not used)
     labels = [x[0] for x in df.index.values.tolist()]
-    substrings = []
 
     # Compare two string entries by creating an array of characters representing the string
     for i in range(len(labels)):
@@ -191,15 +153,15 @@ def comstring_check(df):
                     elif word_i[ci] != word_j[cj] and found_substring:
                         # We do not consider substrings of length 1 as having one character in
                         # common is not indicative that two strings share a common substring
-                        if len(common_substring) > 3 and common_substring not in substrings:
-                            return 1  # True  # substrings.append(common_substring)
+                        if len(common_substring) > 3:
+                            return 1
                         common_substring = ''
                         found_substring = False
                         counter = 0
 
-            if len(common_substring) > 3 and common_substring not in substrings:
-                return 1  # True  # substrings.append(common_substring)
-    return 0  # False  # bool(substrings)
+            if len(common_substring) > 3:
+                return 1
+    return 0
 
 
 def run(df):
@@ -210,8 +172,6 @@ def run(df):
     """
     results = []
     for column in df:
-        # Eliminate any outlying entries
-        # clusters = generate_clusters(df[column].str.lower().to_frame())
         unique_entries = df[column].value_counts()
         total_nr_entries = len(df)
 
@@ -223,10 +183,10 @@ def run(df):
 
         # Pre-check for existing column name and keywords
         name_nominal, name_ordinal = name_check(df[column].name)
-        # keyword_nominal, keyword_ordinal = keyword_check(unique_entries)
         keyword_ordinal = keyword_check(unique_entries)
 
         if ratio_type > 0.8 or unique_entries.count() > 500:
+            # In this case we are dealing with high-cardinality data, which is (almost) always nominal.
             results.append(
                 [
                     total_nr_entries,
@@ -235,17 +195,11 @@ def run(df):
                     variance,
                     name_nominal,
                     name_ordinal,
-                    # keyword_nominal,
                     keyword_ordinal,
                     0,
-                    # 'nominal'
                 ]
-            )  # , column])
+            )
         else:
-            # clusters = generate_clusters(df[column].str.lower().to_frame())
-            # unique_entries = clusters.value_counts()
-            # ratio_type = ratio_check(unique_entries.count(), len(clusters))
-            # column_name_lower = clusters.columns[0].lower()
             results.append(
                 [
                     total_nr_entries,
@@ -254,24 +208,14 @@ def run(df):
                     variance,
                     name_nominal,
                     name_ordinal,
-                    # keyword_nominal,
                     keyword_ordinal,
                     comstring_check(unique_entries),
-                    # 'nominal'
                 ]
-            )  # , column])
+            )
 
     # When training the GBC, we use this statement to gather training data.
+    # Do not forget to import csv when using this.
     # with open("../out_nominal.csv", "a", newline="") as f:
     #     writer = csv.writer(f)
     #     writer.writerows(results)
-    # print(results)
     return results
-
-
-# Test run
-# data = pd.read_csv('datasets/gbc_data/nominal_data/winemag-data-130k-nom.csv')#, sep=';')
-# # data = data[['cut', 'color', 'clarity']]
-# print(data)
-# run(data)
-# # distance_check(data['cut'].value_counts())
