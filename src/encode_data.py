@@ -5,7 +5,7 @@ import pandas as pd
 from dirty_cat import SimilarityEncoder, MinHashEncoder, GapEncoder
 from sklearn.preprocessing import OrdinalEncoder
 from nltk.corpus import wordnet as wn
-# from category_encoders import TargetEncoder
+from category_encoders import TargetEncoder
 # from nltk.stem.wordnet import WordNetLemmatizer
 
 
@@ -120,7 +120,15 @@ def determine_order_heur(values):
     return final_order
 
 
-def run(df, y, column, encode_type, dense):
+# def balanced_classes(y):
+#     """ Determine whether the target classes are balanced or not.
+#
+#     :param y: a pandas Series consisting of target classes.
+#     :return: a Boolean indicating whether the target classes are balanced or not.
+#     """
+
+
+def run(df, y, column, encode_type, dense, balanced):
     """ Run the heuristics on string encoding.
 
     :param df: a pandas DataFrame consisting of the data.
@@ -128,9 +136,9 @@ def run(df, y, column, encode_type, dense):
     :param column: a pandas DataFrame consisting of the column to be encoded.
     :param encode_type: an Integer indicating whether the column needs ordinal or nominal encoding.
     :param dense: a Boolean indicating whether the encoded values are fitted in one column or in multiple.
+    :param balanced: a Boolean indicating whether the target classes are balanced.
     :return: a Dictionary consisting of the mappings String -> Float/List.
     """
-    # TODO: TargetEncoder for non-similar strings.
     if encode_type == 0:
         # Ordinal encoding required. Determine the order and encode accordingly
         unique_entries = [item for item, _ in column.value_counts().iteritems()]
@@ -138,13 +146,18 @@ def run(df, y, column, encode_type, dense):
         enc = OrdinalEncoder(categories=[order])
     else:
         if column.value_counts().count() < 30:
-            # Data has low cardinality. Encode using SimilarityEncoder
+            # Data has low cardinality. Check the class balance
+            if balanced:
+                enc = TargetEncoder()
+                return enc.fit_transform(column, y)
+            # Encode using SimilarityEncoder
             enc = SimilarityEncoder()
         elif column.value_counts().count() < 100:
-            enc = MinHashEncoder()
-        else:
-            # Data has high cardinality. Encode using GapEncoder
+            # Data has medium to high cardinality. Encode using GapEncoder
             enc = GapEncoder()
+        else:
+            # Data has high cardinality. Encode using MinHashEncoder
+            enc = MinHashEncoder()
 
     if dense or encode_type == 0:
         return dict({

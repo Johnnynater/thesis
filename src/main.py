@@ -2,6 +2,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 import encode_data
 import handle_missing
@@ -10,6 +11,7 @@ import infer_ptype
 import infer_stattype
 import process_stringtype
 from gbc import heuristics
+
 
 # Some warnings are shown from other libraries.
 warnings.filterwarnings("ignore")
@@ -110,11 +112,22 @@ def apply_encoding(df, y, results, dense):
     :param dense: a Boolean indicating whether multi-dimensional encodings need to be stored in a single column or not.
     :return: a pandas DataFrame consisting of encoded columns.
     """
+    if y is not None:
+        # Check target class balance. Target class is balanced if the standard deviation is smaller than 10% of the mean
+        target_freq = list(y.value_counts())
+        mean_tf, std_tf = np.mean(target_freq), np.std(target_freq)
+        balanced = std_tf / mean_tf < 0.5
+    else:
+        balanced = False
+
     for col, val in zip(df, results):
         if val != 2 and dense or val == 0 and not dense:
-            df[col] = df[col].map(encode_data.run(df, y, df[col], val, dense))
+            if val == 1 and df[col].value_counts().count() < 30 and balanced:
+                df[col] = encode_data.run(df, y, df[col], val, dense, balanced)
+            else:
+                df[col] = df[col].map(encode_data.run(df, y, df[col], val, dense, balanced))
         elif val == 1 and not dense:
-            df = encode_data.run(df, y, df[col], val, dense)
+            df = encode_data.run(df, y, df[col], val, dense, balanced)
     return df
 
 
@@ -139,6 +152,12 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
             print('>> Column "{}" contains no values. Removing this column from the dataset.'.format(col))
             data = data.drop(columns=[col])
 
+    if y is not None:
+        if y.dtype not in ['int64', 'float64']:
+            print('>> Given target column is not encoded. Encoding using LabelEncoder...')
+            le = LabelEncoder()
+            y = pd.Series(le.fit_transform(y), name=y.name)
+
     # Infer data / string type using ptype
     print('> Inferring data types and string features...')
     schema, names = inference_ptype(data)
@@ -147,7 +166,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
     datatypes = [col.type for _, col in schema.cols.items()]
     missing_vals = [col.get_na_values() for _, col in schema.cols.items()]
     outlier_vals = [col.get_an_values() for _, col in schema.cols.items()]
-    print(datatypes)
+    # print(datatypes)
 
     # FOR TESTING PROCESSING:
     # datatypes = ['string' if item == 'day' else item for item in datatypes]
@@ -170,7 +189,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
                  [
                      i for i in range(len(datatypes))
                      if datatypes[i] != 'string'
-                     and datatypes[i] not in names + ['boolean', 'gender', 'date-iso-8601', 'date-eu']
+                        and datatypes[i] not in names + ['boolean', 'gender', 'date-iso-8601', 'date-eu']
                  ]
                  ]
 
@@ -241,5 +260,7 @@ if __name__ == "__main__":
     test_df = pd.read_csv(
         r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\winemag-data-130k-v2.csv')  # winemag-data-130k-v2.csv
     test_df = test_df.iloc[:9999, :]
-    print(test_df.iloc[:10, :].to_string())
-    print(run(test_df, dense_encoding=True, verbose=False).iloc[:10, :].to_string())
+    label = test_df['points']
+    test_df = test_df.drop(columns=['points'])
+    # print(test_df.iloc[:10, :].to_string())
+    print(run(test_df, y=label, dense_encoding=True, verbose=False).iloc[:10, :].to_string())
