@@ -121,13 +121,18 @@ def apply_encoding(df, y, results, dense):
         balanced = False
 
     for col, val in zip(df, results):
-        if val != 2 and dense or val == 0 and not dense:
+        if val == 2:
+            # No encoding is required
+            continue
+        else:
             if val == 1 and df[col].value_counts().count() < 30 and balanced:
+                # A nominal encoding is required
                 df[col] = encode_data.run(df, y, df[col], val, dense, balanced)
-            else:
+            elif val == 1 and not dense:
+                df = encode_data.run(df, y, df[col], val, dense, balanced)
+            elif (val == 1 and dense) or val == 0:
+                # A nominal encoding summed up into one column or an ordinal encoding is required
                 df[col] = df[col].map(encode_data.run(df, y, df[col], val, dense, balanced))
-        elif val == 1 and not dense:
-            df = encode_data.run(df, y, df[col], val, dense, balanced)
     return df
 
 
@@ -189,7 +194,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
                  [
                      i for i in range(len(datatypes))
                      if datatypes[i] != 'string'
-                        and datatypes[i] not in names + ['boolean', 'gender', 'date-iso-8601', 'date-eu']
+                     and datatypes[i] not in names + ['boolean', 'gender', 'date-iso-8601', 'date-eu']
                  ]
                  ]
 
@@ -252,15 +257,20 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
         print(info.to_string())
 
     result = pd.concat([other_cols, string_cols, bool_cols, date_cols, unique_string_cols], axis=1)
-    return result
+
+    # Return the label as well if it was given as a parameter
+    if y is not None:
+        return result, y
+    else:
+        return result
 
 
 if __name__ == "__main__":
     # Load in the dataset
     test_df = pd.read_csv(
-        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\winemag-data-130k-v2.csv')  # winemag-data-130k-v2.csv
+        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\winemag-data-130k-v2.csv')  # winemag-data-130k-v2.csv Automobile_data.csv
     test_df = test_df.iloc[:9999, :]
     label = test_df['points']
     test_df = test_df.drop(columns=['points'])
     # print(test_df.iloc[:10, :].to_string())
-    print(run(test_df, y=label, dense_encoding=True, verbose=False).iloc[:10, :].to_string())
+    print(run(test_df, y=label, dense_encoding=False, verbose=False).iloc[:10, :].to_string())
