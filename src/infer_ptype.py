@@ -1,6 +1,5 @@
 from ptype.Ptype import Ptype
 from pfsms import create_pfsm
-import pickle as pkl
 
 
 def infer(df):
@@ -12,7 +11,6 @@ def infer(df):
     """
     ptype = Ptype()
     # Adjust the Strings pfsm s.t. it can tolerate account names starting with '@' and tags starting with '#'
-    spec_char = 'áéíóúýàèìòùäëïöüÿâêîôûãñõÁÉÍÓÚÝÀÈÌÒÙÄËÏÖÜŸÂÊÎÔÛÃÑÕŠšŽžç’`\''
     ptype.machines.forType['string'].initialize(reg_exp="[@#]*[a-zA-Z0-9 .,\\\-_%:;&]+ ?")
     names = ['coordinate', 'day', 'email', 'filepath', 'month', 'numerical', 'sentence', 'url', 'zipcode']
     machines = [
@@ -21,7 +19,6 @@ def infer(df):
         create_pfsm.Sentence(), create_pfsm.URL(), create_pfsm.Zipcode(),
     ]
     for name, machine in zip(names, machines):
-        #machine = pkl.load(open('pfsms/trained_machines/%s.obj' % name, 'rb'))
         ptype.types.append(name)
         ptype.machines.forType[name] = machine
     return ptype.schema_fit(df), names

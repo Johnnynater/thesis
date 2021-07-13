@@ -133,7 +133,7 @@ def decode_strings(df, datatypes, names, encoded_vals):
     :return: a pandas DataFrame consisting of the original String entries.
     """
     for col, val in zip(df, datatypes):
-        if val in names or df[col].dtype not in ['int64', 'float64']:
+        if val in names or col in encoded_vals:
             for item in df[col].unique():
                 if item not in encoded_vals[col]:
                     # Associate item with the closest key that is in the dict

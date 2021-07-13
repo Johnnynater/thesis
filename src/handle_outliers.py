@@ -1,4 +1,5 @@
 import difflib
+import pandas as pd
 
 
 def generate_ngram(unique_vals, n=3):
@@ -80,20 +81,6 @@ def compute_close_matches(df, suspect):
     return list(set(difflib.get_close_matches(suspect, df)))
 
 
-# def confirm_close_matches(vals, pair):
-#     """ Confirm using difflib's get_close_matches whether the two values are indeed close matches using Gestalt
-#         Pattern Matching.
-#
-#     :param vals: a List of Strings where each entry is unique.
-#     :param pair: a List consisting of a pair of Strings who are claimed to be similar to each other.
-#     :return: Boolean, True if the second item of pair is in the calculated close_matches, False otherwise.
-#     """
-#     tmp = vals.copy()
-#     tmp.remove(pair[0])
-#     close_matches = difflib.get_close_matches(pair[0], tmp)
-#     return True if pair[1] in close_matches else False
-
-
 def run(df, datatypes, outliers, names):
     """ Run the outlier handling procedure, where each column could be treated differently based on reported outliers
         and their datatype.
@@ -119,7 +106,8 @@ def run(df, datatypes, outliers, names):
         elif outlier and dt != 'sentence':
             for out in outlier:
                 # Consider only the < 2.5% outliers.
-                if unique_freq.at[out] / len(df) < 0.025 and len(unique_vals) / len(df) < 0.8:
+                if ((unique_freq.at[out] / len(df) < 0.025 and len(unique_vals) / len(df) < 0.8)
+                        or (out in df[col].values and dt not in names and dt != 'string')):
                     # Check for similar entries using difflib
                     close_matches = compute_close_matches(unique_vals, out)
 
@@ -143,10 +131,10 @@ def run(df, datatypes, outliers, names):
                                 df[col] = df[col].replace(tup[0][0], tup[1][0])
 
                     if out in df[col].values and dt not in names and dt != 'string':
-                        # If the outlier is still in the numerical column, replace it with a random non-outlier value.
+                        # If the data type outlier is still there, replace it with a random non-outlier value.
                         replaced = False
                         while not replaced:
-                            replacement = df[col].sample(1)
+                            replacement = df[col].sample(1).iloc[0]
                             if replacement not in outlier:
                                 print('>> Outlier found in column "{}". Outlier "{}" replaced by "{}".'
                                       .format(col, out, replacement))
@@ -154,16 +142,25 @@ def run(df, datatypes, outliers, names):
                                 replaced = True
 
         elif not outlier and dt in names and dt != 'sentence':
-            # TODO: only consider <2.5% frequency entries as candidates
+            # Only consider <2.5% frequency entries as candidates
+            infreq_vals = unique_freq[(unique_freq.values / len(df) < 0.025) & (len(unique_vals) / len(df) < 0.8)]
+            infreq_vals = pd.Series(infreq_vals.index.values, index=infreq_vals)
+
             # Take the most similar entries
-            ngrams = generate_ngram(unique_vals)
-            suspects = compute_most_similar(unique_vals, ngrams)
-            for pair in suspects:
-                # if confirm_close_matches(unique_vals, pair):
-                # Sort the matches based on their frequency
-                tup = sort_tuples(unique_freq, pair)
-                if compute_ratio(tup):
-                    # Replace outlying value with the most similar value
-                    print('>> Outlier found. Outlier {} replaced by {}.'.format(tup[0][0], tup[1][0]))
-                    df[col] = df[col].replace(tup[0][0], tup[1][0])
+            for item in infreq_vals:
+                # Check for similar entries using difflib
+                close_matches = compute_close_matches(unique_vals, item)
+
+                # Take the most similar entries
+                ngrams = generate_ngram(close_matches)
+                most_sim = compute_most_similar(close_matches, ngrams)
+
+                for pair in most_sim:
+                    if item in pair:
+                        # Sort the matches based on their frequency
+                        tup = sort_tuples(unique_freq, pair)
+                        if compute_ratio(tup):
+                            # Replace outlying value with the most similar value
+                            print('>> Outlier found. Outlier {} replaced by {}.'.format(tup[0][0], tup[1][0]))
+                            df[col] = df[col].replace(tup[0][0], tup[1][0])
     return df, datatypes

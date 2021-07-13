@@ -223,6 +223,7 @@ def process_email(df):
             val[1] = val[1].split(".", 1)[0]
         val = " ".join(val)
         changes[emails[i]] = val
+
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return changes, 1
 
@@ -250,6 +251,7 @@ def process_filepath_url(df, featuretype):
         val = list(filter(lambda a: a != "", val))
         val = " ".join(val)
         changes[data[i]] = val
+
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return changes, 1
 
@@ -386,6 +388,7 @@ def process_numerical(df, orig_df, dense):
             orig_df[str(df.columns[0])] = orig_df[str(df.columns[0])].map(
                 {item[0]: item[1] for item in processed_nums}
             )
+
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return orig_df, 2
 
@@ -553,20 +556,3 @@ def run(df, stringtype, dense):
         else:
             result, encode = eval('process_{}(df_unique)'.format(stringtype))
         return df.replace(result), encode
-
-# test
-# data = pd.DataFrame([r'52º 22\' 12.777" N 4º 53\' 42.604" E', 'N52.22.12E4.53.43'])
-# data = pd.DataFrame([r"80+15", r"80+009"])
-# print(run(data, 'numerical')[0].to_string())
-
-# data = pd.read_csv(r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master
-# thesis\Tests\data\pfsms\Data_Uk-Email-URL-Zip.csv') print(run(data['postal'].to_frame().iloc[:100000, :].dropna(),
-# 'zipcode')[0].to_string())
-
-
-# if __name__ == "__main__":
-#     test_df = pd.read_csv(
-#         r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\fifa.csv')  # winemag-data-130k-v2.csv
-#     test_df = test_df.iloc[:10, :]
-#     test_df = test_df['LS'].to_frame().dropna()
-#     print(run(test_df, 'numerical', False))

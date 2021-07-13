@@ -136,7 +136,7 @@ def apply_encoding(df, y, results, dense):
     return df
 
 
-def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
+def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
     """ Run the framework for automated string handling, cleaning, and encoding.
 
     :param data: a pandas DataFrame containing string columns.
@@ -144,7 +144,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
     :param encode: a Boolean indicating whether the cleaned string data needs to be encoded.
     :param dense_encoding: a Boolean indicating whether multi-dimensional encodings need to be stored in a single column
                            or not.
-    :param verbose: a Boolean indicating whether additional information on every column needs to be printed.
+    :param display_info: a Boolean indicating whether additional information on every column needs to be printed.
     :return: a pandas DataFrame whose string entries are cleaned based on the other parameters.
     """
     print('> Performing pre-checks...')
@@ -158,7 +158,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
             data = data.drop(columns=[col])
 
     if y is not None:
-        if y.dtype not in ['int64', 'float64']:
+        if encode and y.dtype not in ['int64', 'float64']:
             print('>> Given target column is not encoded. Encoding using LabelEncoder...')
             le = LabelEncoder()
             y = pd.Series(le.fit_transform(y), name=y.name)
@@ -171,7 +171,6 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
     datatypes = [col.type for _, col in schema.cols.items()]
     missing_vals = [col.get_na_values() for _, col in schema.cols.items()]
     outlier_vals = [col.get_an_values() for _, col in schema.cols.items()]
-    # print(datatypes)
 
     # FOR TESTING PROCESSING:
     # datatypes = ['string' if item == 'day' else item for item in datatypes]
@@ -200,17 +199,8 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
 
     # Make a list of types for each of the split columns
     unique_string_dts = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] in names]
-    string_dts = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] == 'string']
     bool_dts = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] in ['boolean', 'gender']]
     date_dts = [datatypes[i] for i in range(len(datatypes)) if datatypes[i] in ['date-iso-8601', 'date-eu']]
-
-    # # Make a list of outlier values for each column
-    # unique_string_out = [outlier_vals[i] for i in range(len(datatypes)) if datatypes[i] in names]
-    # string_out = [outlier_vals[i] for i in range(len(datatypes)) if datatypes[i] == 'string']
-
-    # Handle outliers in string columns
-    # unique_string_cols = handle_outlier_vals(unique_string_cols, unique_string_dts, unique_string_out)
-    # string_cols = handle_outlier_vals(string_cols, string_dts, string_out)
 
     # Process unique strings and boolean / date types
     print('> Processing string features in the data...')
@@ -221,6 +211,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
     # If cannot infer using given PFSMs, gather features and infer nominal / ordinal using GradientBoostingClassifier
     print('> Predicting ordinality of string columns without string features...')
     results_heur = extract_features_gbc(string_cols)
+
     # The GBC assigns a 0 (= ordinal) or a 1 (= nominal) for each standard string column
     results_gbc = inference_statistical_type(results_heur)
 
@@ -230,7 +221,7 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
         string_cols = apply_encoding(string_cols, y, results_gbc, dense_encoding)
         unique_string_cols = apply_encoding(unique_string_cols, y, require_enc_unique, dense_encoding)
 
-    if verbose:
+    if display_info:
         # Instantiate DataFrame for information per string column
         # TODO: fetch more information?
         info = pd.DataFrame({
@@ -268,9 +259,9 @@ def run(data, y=None, encode=True, dense_encoding=True, verbose=True):
 if __name__ == "__main__":
     # Load in the dataset
     test_df = pd.read_csv(
-        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\winemag-data-130k-v2.csv')  # winemag-data-130k-v2.csv Automobile_data.csv
-    test_df = test_df.iloc[:9999, :]
-    label = test_df['points']
-    test_df = test_df.drop(columns=['points'])
+        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\fifa.csv')  # winemag-data-130k-v2.csv Automobile_data.csv
+    # test_df = test_df.iloc[:9999, :]
+    label = test_df['Value']
+    test_df = test_df.drop(columns=['Value'])
     # print(test_df.iloc[:10, :].to_string())
-    print(run(test_df, y=label, dense_encoding=False, verbose=False).iloc[:10, :].to_string())
+    print(run(test_df, y=label, dense_encoding=False, display_info=False)[0].iloc[:10, :].to_string())
