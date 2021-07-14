@@ -8,10 +8,10 @@ Users can install the framework like so:
 
 ```
 # pip
-pip install git+https://github.com/ml-tue/automated-string-cleaning
+pip install git+https://github.com/ml-tue/automated-string-cleaning.git
 
 # GitHub clone
-git clone https://github.com/ml-tue/automated-string-cleaning
+git clone https://github.com/ml-tue/automated-string-cleaning.git
 ```
 
 When cloning from GitHub, it might be necessary to install relevant packages like so:
@@ -36,7 +36,7 @@ pip install -r requirements.txt
    
 3. Run the string cleaner:
     ```
-   from auto_string_cleaner import main
+   from auto_string_cleaner.src import main
    X = main.run(X, encode=False)
     ```
    

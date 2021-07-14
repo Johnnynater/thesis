@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 REQUIRED = [
     "numpy>=1.19.5",
@@ -18,8 +18,8 @@ REQUIRED = [
 setup(
     name='auto_string_cleaner',
     version='1.0',
-    packages=['pfsms', 'gbc'],
     package_dir={'': 'src'},
+    packages=['src'],
     url='https://github.com/ml-tue/automated-string-cleaning',
     license='',
     author='John van Lith',
