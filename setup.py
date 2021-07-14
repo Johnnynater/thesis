@@ -18,8 +18,8 @@ REQUIRED = [
 setup(
     name='auto_string_cleaner',
     version='1.0',
-    package_dir={'': 'auto_string_cleaner'},
-    packages=find_packages('auto_string_cleaner', exclude=['pfsms', 'gbc']),
+    # package_dir={'': 'auto_string_cleaner'},
+    packages=['auto_string_cleaner'],
     url='https://github.com/ml-tue/automated-string-cleaning',
     license='',
     author='John van Lith',
