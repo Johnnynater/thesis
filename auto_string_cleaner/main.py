@@ -4,14 +4,8 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
-import encode_data
-import handle_missing
-import handle_outliers
-import infer_ptype
-import infer_stattype
-import process_stringtype
-from gbc import heuristics
-
+from .modules import encode_data, handle_missing, handle_outliers, infer_ptype, predict_ordinality, process_stringtype,\
+    extract_features
 
 # Some warnings are shown from other libraries.
 warnings.filterwarnings("ignore")
@@ -27,13 +21,13 @@ def inference_ptype(df):
     return infer_ptype.infer(df)
 
 
-def inference_statistical_type(df):
+def ordinality_prediction(df):
     """ Predict the statistical type of each standard string column.
 
     :param df: a List of Floats/Integers containing results from each heuristic.
     :return: a List of Integers representing the statistical type of each standard string column.
     """
-    return infer_stattype.infer(df)
+    return predict_ordinality.infer(df)
 
 
 def extract_features_gbc(df):
@@ -42,7 +36,7 @@ def extract_features_gbc(df):
     :param df: a pandas DataFrame consisting of standard string columns.
     :return: a List of Lists containing Floats/Integers that represent the results from each heuristic.
     """
-    return heuristics.run(df)
+    return extract_features.run(df)
 
 
 def handle_missing_vals(df, datatypes, missing_vals, names):
@@ -214,7 +208,7 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
 
     if results_heur:
         # The GBC assigns a 0 (= ordinal) or a 1 (= nominal) for each standard string column
-        results_gbc = inference_statistical_type(results_heur)
+        results_gbc = ordinality_prediction(results_heur)
     else:
         results_gbc = []
 
@@ -259,5 +253,6 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
 
 if __name__ == "__main__":
     df_train = pd.read_csv(
-        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Tests\data\pfsms\lits_df-Filepath.csv')
+        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Tests\data\pfsms\SFcrime-100k.csv')
+    df_train = df_train.iloc[:50, :]
     run(df_train)

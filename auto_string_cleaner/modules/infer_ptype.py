@@ -1,5 +1,5 @@
 from ptype.Ptype import Ptype
-from pfsms import create_pfsm
+from .pfsms import create_pfsm
 
 
 def infer(df):

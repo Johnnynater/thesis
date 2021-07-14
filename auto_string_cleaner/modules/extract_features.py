@@ -1,4 +1,5 @@
 import re
+import os
 import numpy as np
 import pickle as pkl
 from itertools import zip_longest
@@ -33,9 +34,13 @@ ordinal_keywords = [
     'much', 'many', 'more', 'most', 'far', 'less', 'lesser', 'least', 'well', 'better', 'best'
 ]
 
-# Since the file size of the original embeddings is too big, I have to split the dict into two separate dicts
-fh_emb = pkl.load(open(f'datasets/50_glove_1.pkl', 'rb'))
-sh_emb = pkl.load(open(f'datasets/50_glove_2.pkl', 'rb'))
+# Since the file size of the original embeddings is too big, we had to split the dict into two separate dicts
+dirname = os.path.dirname(__file__)
+filename_fh = os.path.abspath(os.path.join(dirname, '..', 'datasets', '50_glove_1.pkl'))
+filename_sh = os.path.abspath(os.path.join(dirname, '..', 'datasets', '50_glove_2.pkl'))
+
+fh_emb = pkl.load(open(filename_fh, 'rb'))
+sh_emb = pkl.load(open(filename_sh, 'rb'))
 
 embeddings = {**fh_emb, **sh_emb}
 
