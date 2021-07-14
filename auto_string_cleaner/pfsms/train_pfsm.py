@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle as pkl
-from src.pfsms import create_pfsm
+from auto_string_cleaner.pfsms import create_pfsm
 from ptype.Trainer import Trainer
 from ptype.Ptype import Ptype
 
