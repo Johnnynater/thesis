@@ -8,5 +8,6 @@ def infer(data):
                  standard string column.
     :return: a List of predicted statistical types for each standard string column.
     """
+    print(data)
     model = pkl.load(open('gbc/trained_gbc.sav', 'rb'))
     return model.predict(data)

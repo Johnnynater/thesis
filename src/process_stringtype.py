@@ -197,7 +197,6 @@ def process_day(df):
     :return: a pandas DataFrame consisting of Strings that represent abbreviated days;
              an Integer indicating the encoding type required.
     """
-    # TODO: what if ordinal encoding is better?
     # 0 = ordinal encoding, 1 = nominal encoding, 2 = no encoding needed / already encoded
     return df[df.columns[0]].str[:2], 1
 
@@ -436,7 +435,6 @@ def process_ordinal(df):
     return changes, 2
 
 
-# TODO: make memory-efficient
 def process_sentence(df):
     """ Process sentences into a list of nouns for easier encoding.
 

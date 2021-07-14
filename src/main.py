@@ -212,8 +212,11 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
     print('> Predicting ordinality of string columns without string features...')
     results_heur = extract_features_gbc(string_cols)
 
-    # The GBC assigns a 0 (= ordinal) or a 1 (= nominal) for each standard string column
-    results_gbc = inference_statistical_type(results_heur)
+    if results_heur:
+        # The GBC assigns a 0 (= ordinal) or a 1 (= nominal) for each standard string column
+        results_gbc = inference_statistical_type(results_heur)
+    else:
+        results_gbc = []
 
     if encode:
         print('> Encoding string data...')
@@ -223,7 +226,6 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
 
     if display_info:
         # Instantiate DataFrame for information per string column
-        # TODO: fetch more information?
         info = pd.DataFrame({
             'Number of unique values': [len(data[col].unique()) for col in data],
             'Type': datatypes,
@@ -255,13 +257,7 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
     else:
         return result
 
-
 if __name__ == "__main__":
-    # Load in the dataset
-    test_df = pd.read_csv(
-        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Program\src\datasets\gbc_data\fifa.csv')  # winemag-data-130k-v2.csv Automobile_data.csv
-    # test_df = test_df.iloc[:9999, :]
-    label = test_df['Value']
-    test_df = test_df.drop(columns=['Value'])
-    # print(test_df.iloc[:10, :].to_string())
-    print(run(test_df, y=label, dense_encoding=False, display_info=False)[0].iloc[:10, :].to_string())
+    df_train = pd.read_csv(
+        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Tests\data\pfsms\lits_df-Filepath.csv')
+    run(df_train)
