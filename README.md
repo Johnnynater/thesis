@@ -32,15 +32,18 @@ pip install -r requirements.txt
    
    # Optional: consider a subsample
    X = X.iloc[:200, :]
-    ```
    
+   display(X)
+    ```
+    ![](images/wine-reviews-before.png)
 3. Run the string cleaner:
     ```
    from auto_string_cleaner.src import main
    X = main.run(X, encode=False)
     ```
-   
+
 4. Display the cleaned DataFrame:
     ```
    display(X)
     ```
+    ![](images/wine-reviews-after.png)

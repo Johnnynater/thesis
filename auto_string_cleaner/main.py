@@ -241,7 +241,7 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
             mapping = pd.Series(info.index).map(mapping)
             mapping.index = list(data.columns)
             info[name] = mapping
-        print(info.to_string())
+        print(info)
 
     result = pd.concat([other_cols, string_cols, bool_cols, date_cols, unique_string_cols], axis=1)
 
@@ -250,9 +250,3 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
         return result, y
     else:
         return result
-
-if __name__ == "__main__":
-    df_train = pd.read_csv(
-        r'C:\Users\s165399\Documents\[MSc] Data Science in Engineering\Year 2\Master thesis\Tests\data\pfsms\SFcrime-100k.csv')
-    df_train = df_train.iloc[:50, :]
-    run(df_train)
