@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
-from .modules import encode_data, handle_missing, handle_outliers, infer_ptype, predict_ordinality, process_stringtype,\
+from .modules import encode_data, handle_missing, handle_outliers, infer_ptype, predict_ordinality, process_stringtype, \
     extract_features
 
 # Some warnings are shown from other libraries.
@@ -187,7 +187,7 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
                  [
                      i for i in range(len(datatypes))
                      if datatypes[i] != 'string'
-                     and datatypes[i] not in names + ['boolean', 'gender', 'date-iso-8601', 'date-eu']
+                        and datatypes[i] not in names + ['boolean', 'gender', 'date-iso-8601', 'date-eu']
                  ]
                  ]
 
@@ -219,29 +219,54 @@ def run(data, y=None, encode=True, dense_encoding=True, display_info=True):
         unique_string_cols = apply_encoding(unique_string_cols, y, require_enc_unique, dense_encoding)
 
     if display_info:
+        # Shorten outlier vals
+        info_out_vals = []
+        for item in outlier_vals:
+            if len(item) >= 4:
+                if item and len(item[0]) < 50:
+                    info_out_vals.append([item[0], '...', item[-1]])
+                elif len(item[0]) >= 50:
+                    info_out_vals.append(['<outlier length too large>'])
+            else:
+                info_out_vals.append(item)
+
         # Instantiate DataFrame for information per string column
         info = pd.DataFrame({
             'Number of unique values': [len(data[col].unique()) for col in data],
             'Type': datatypes,
             'Missing values': missing_vals,
-            'Outliers': outlier_vals
+            'Outliers': info_out_vals
         })
         info.index = list(data.columns)
         # Store obtained data in info DataFrame
         check_ord = {x: y for x, y in
                      zip(list(string_cols.columns), ['Yes' if i == 0.0 else 'No' for i in results_gbc])}
+
         enc_used = {x:
-                        'OrdinalEncoder' if check_ord[x] == 'Yes'
-                        else 'SimilarityEncoder' if info.at[x, 'Number of unique values'] < 30
-                        else 'GapEncoder' if info.at[x, 'Number of unique values'] < 100
-                        else 'MinHashEncoder' for x in list(string_cols.columns)
+                        'OrdinalEncoder' if x in check_ord and check_ord[x] == 'Yes'
+                        else 'SimilarityEncoder' if info.at[x, 'Number of unique values'] < 30 or (
+                                    info.at[x, 'Number of unique values'] < 30 and info.at[x, 'Type'] in ['day',
+                                                                                                          'email',
+                                                                                                          'filepath',
+                                                                                                          'sentence',
+                                                                                                          'url',
+                                                                                                          'zipcode'])
+                        else 'GapEncoder' if info.at[x, 'Number of unique values'] < 100 or (
+                                    info.at[x, 'Number of unique values'] < 100 and info.at[x, 'Type'] in ['email',
+                                                                                                           'filepath',
+                                                                                                           'sentence',
+                                                                                                           'url',
+                                                                                                           'zipcode'])
+                        else 'Custom' if info.at[x, 'Type'] in ['boolean', 'coordinate', 'date-iso-8601', 'date-eu',
+                                                                'gender', 'month', 'numerical']
+                        else 'MinHashEncoder' for x in (list(string_cols.columns) + list(unique_string_cols.columns))
                     }
 
         for name, mapping in zip(['Ordinal?', 'Encoding'], [check_ord, enc_used]):
             mapping = pd.Series(info.index).map(mapping)
             mapping.index = list(data.columns)
             info[name] = mapping
-        print(info)
+        print(info.to_string())
 
     result = pd.concat([other_cols, string_cols, bool_cols, date_cols, unique_string_cols], axis=1)
 
